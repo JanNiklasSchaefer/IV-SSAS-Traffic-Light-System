@@ -21,10 +21,13 @@ task3/
 │   ├── mayor-vehicle-client/
 │   ├── other-vehicle-client/
 │   └── pedestrian-client/
-├── kubernetes/
+├── kubernetes/              # Kubernetes deployment manifests
+│   ├── ingress.yaml         # Manual Ingress configuration
+│   ├── test-pod.yaml        # Test pod for cluster-internal testing
 │   └── namespaces/          # Namespace definitions
 │       └── gruppe8-tcc.yaml
-│
+├── test-endpoints.sh        # Comprehensive endpoint testing script
+├── pom.xml                  # Parent POM for all modules
 └── README.md                # You are here
 ```
 
