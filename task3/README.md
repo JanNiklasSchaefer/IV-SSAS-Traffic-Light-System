@@ -182,7 +182,7 @@ The shared Ingress exposes:
 - `http://tcc.test/api/priority/*` → Priority Service
 - `http://tcc.test/api/status/*` → Status Service
 
-**Step 8: Verify Deployment and Test**
+**Verify Deployment and Test**
 
 ```bash
 # Check all pods across all namespaces
