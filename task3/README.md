@@ -65,6 +65,17 @@ Complete overview of all REST endpoints organized by service.
 - **Calls:** This service initiates the call to another service
 - **Called by:** This service receives calls from another service
 
+### Prerequisites
+
+Download the IV-SSAS-Kind-Cluster. Follow the Instructions there to install and start it : https://git.tu-berlin.de/aot-security/iv-software-security-for-autonomous-systems/examples/iv-ssas-kind-cluster
+
+The Cluster must be running on your device before you execute the next steps.
+
+Additionally you need: 
+
+- Docker Desktop or Docker Engine running
+- Local Docker registry (optional, for pushing images)
+
 ### Building the Project
 
 The project can be built using Maven from the `task3/` directory.
@@ -87,11 +98,6 @@ This will:
 #### Build with Container Images
 
 To build all services and clients including Docker container images:
-
-**Prerequisites:**
-
-- Docker Desktop or Docker Engine running
-- Local Docker registry (optional, for pushing images)
 
 ```bash
 cd task3
