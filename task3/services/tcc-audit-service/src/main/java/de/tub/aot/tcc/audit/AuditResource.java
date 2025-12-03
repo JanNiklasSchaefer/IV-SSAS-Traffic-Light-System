@@ -30,7 +30,7 @@ public class AuditResource {
     @GET
     @Path("/logs")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getLogs(@QueryParam("from") String from, @QueryParam("to") String to) {
+    public Response getLogs(@QueryParam("from") long from, @QueryParam("to") long to) {
         return Response.ok(auditLogs).build();
     }
 }

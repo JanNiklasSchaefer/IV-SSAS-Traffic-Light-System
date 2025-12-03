@@ -35,9 +35,9 @@ public class PriorityResource {
     }
     
     @GET
-    @Path("/requests/{requestId}")
+    @Path("/requests/{request_id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getRequestStatus(@PathParam("requestId") String requestId) {
+    public Response getRequestStatus(@PathParam("request_id") String requestId) {
         RequestStatus status = requestStore.get(requestId);
         
         if (status == null) {
