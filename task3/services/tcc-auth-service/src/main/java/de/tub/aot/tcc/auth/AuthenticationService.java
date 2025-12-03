@@ -1,12 +1,14 @@
 package de.tub.aot.tcc.auth;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 
 
 @Path("/api/auth")
@@ -17,7 +19,16 @@ public class AuthenticationService {
     @Path("/token")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response token(TokenRequest tokenRequest) {
+    public Response token(
+            @QueryParam("grant_type") String grantType,
+            @RequestBody(
+                          required = false,
+                          description = "Additional parameters depending on the grant type",
+                          content = @Content(
+                                  schema = @Schema(implementation = TokenRequest.class)
+                          )
+                  )
+                      TokenRequest request) {
         TokenResponse response = new TokenResponse();
 
         response.setRefreshToken("hardcoded-refresh-token-refresh");
@@ -31,7 +42,7 @@ public class AuthenticationService {
     @Path("/introspect")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response introspect(String token) {
+    public Response introspect(@QueryParam("access_token") String token) {
         if(introspectToken(token))
             return Response.ok().build();
         else return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -41,7 +52,7 @@ public class AuthenticationService {
     @Path("/userinfo")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response userinfo(String accessToken) {
+    public Response userinfo(@QueryParam("access_token") String accessToken) {
         UserInfo info = new UserInfo();
 
         return Response.ok(info).build();

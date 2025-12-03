@@ -1,5 +1,7 @@
 package de.tub.aot.tcc.auth;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 public class TokenRequest {
     private String clientId;
     private String clientSecret;
@@ -7,10 +9,13 @@ public class TokenRequest {
     private String username;
     private String password;
 
-    private String grant_type;
-
     private String access_token;
     private String refresh_token;
+
+    @Schema(hidden = true)
+    private String grant_type;
+
+
 
     public TokenRequest(String clientId, String clientSecret) {
         this.clientId = clientId;
