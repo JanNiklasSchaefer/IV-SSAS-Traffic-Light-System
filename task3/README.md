@@ -8,21 +8,22 @@ Goal: deliver runnable microservices, Kubernetes manifests, and basic clients (e
 ```
 task3/
 ├── services/                # Source & Docker context for each microservice
-│   ├── tcc-priority-service/
-│   ├── tcc-state-controller/
-│   ├── tcc-status-service/
-│   ├── tcc-auth-service/
-│   ├── tcc-audit-service/
-│   ├── traffic-light-device-service/
-│   ├── time-service/
-│   └── location-validator/
+│   ├── tcc-priority-service/        # → gruppe8-tcc namespace
+│   ├── tcc-state-controller/         # → gruppe8-tcc namespace
+│   ├── tcc-status-service/           # → gruppe8-tcc namespace
+│   ├── auth-service/                 # → gruppe8-auth-services namespace
+│   ├── tcc-audit-service/           # → gruppe8-tcc namespace
+│   ├── traffic-light-device-service/ # → gruppe8-traffic-light-devices namespace
+│   ├── time-service/                  # → gruppe8-shared-services namespace
+│   └── location-validator/           # → gruppe8-shared-services namespace
 ├── clients/                 # Client apps hitting the REST endpoints
 │   ├── emergency-vehicle-client/
 │   ├── mayor-vehicle-client/
 │   ├── other-vehicle-client/
 │   └── pedestrian-client/
 ├── kubernetes/
-│   └──namespaces/
+│   └── namespaces/          # Namespace definitions
+│       └── gruppe8-tcc.yaml
 │
 └── README.md                # You are here
 ```
@@ -71,49 +72,140 @@ Complete overview of all REST endpoints organized by service.
 - **Calls:** This service initiates the call to another service
 - **Called by:** This service receives calls from another service
 
-### Testing Java Files
+### Building the Project
 
-There are two ways to test your Java files locally:
+The project can be built using Maven from the `task3/` directory.
 
-#### Option 1: Quarkus Dev Mode (Recommended)
+#### Build and Test
 
-Start the service in development mode with hot reload:
-
-```bash
-cd task3/services/tcc-priority-service
-../../mvnw compile quarkus:dev
-```
-
-The service will start on `http://localhost:8080`. You can:
-
-- Test endpoints via `curl` or browser
-- Access OpenAPI UI at `http://localhost:8080/q/swagger-ui`
-- Access OpenAPI spec at `http://localhost:8080/q/openapi`
-- Changes to Java files will automatically reload
-
-**Example:**
+To build all services and clients and run tests:
 
 ```bash
-# Test Priority Request endpoint
-curl -X POST http://localhost:8080/api/priority/requests \
-  -H "Content-Type: application/json" \
-  -d '{"vehicleType": "emergency"}'
+cd task3
+mvn clean install
 ```
 
-**Stop the service:** Press `Ctrl+C` in the terminal
+This will:
 
-#### Option 2: Main Method (Simple Testing)
+- Compile all services and clients
+- Run tests (if any)
+- Install artifacts to local Maven repository
 
-For simple logic testing without REST endpoints, you can create a main method:
+#### Build with Container Images
 
-```java
-public class TestPriorityResource {
-    public static void main(String[] args) {
-        PriorityResource resource = new PriorityResource();
-        PriorityRequest request = new PriorityRequest("emergency");
-        // Test your logic here
-    }
-}
+To build all services and clients including Docker container images:
+
+**Prerequisites:**
+
+- Docker Desktop or Docker Engine running
+- Local Docker registry (optional, for pushing images)
+
+```bash
+cd task3
+mvn clean package
 ```
 
-**Note:** REST endpoints (`@Path`, `@GET`, `@POST`) require Quarkus/JAX-RS framework and won't work with a simple main method. Use Quarkus Dev Mode for testing REST APIs.
+This will:
+
+- Compile all services and clients
+- Build Docker container images for each service
+- Images are built using Jib and stored locally
+- Container images are tagged for the local registry (`localhost:5001`)
+
+**Note:** If Docker is not available, use `mvn clean package -Dquarkus.container-image.build=false` to skip container image building.
+
+### Kubernetes Deployment
+
+#### Prerequisites
+
+- Kubernetes cluster running (e.g., kind, minikube, or cloud provider)
+- `kubectl` configured to connect to your cluster
+- Docker registry accessible from the cluster (or use local registry with kind)
+
+#### Generate Kubernetes Manifests
+
+Kubernetes manifests are automatically generated during the build process. They can be found in:
+
+```
+task3/services/<service-name>/target/kubernetes/kubernetes.yml
+```
+
+To generate manifests without deploying:
+
+```bash
+cd task3
+mvn clean package -Dquarkus.kubernetes.deploy=false
+```
+
+#### Deploy to Kubernetes
+
+**Namespace Structure**
+
+Services are organized into multiple namespaces for better separation:
+
+- **`gruppe8-tcc`**: TCC core services (Priority, State Controller, Status, Audit)
+- **`gruppe8-auth-services`**: Auth Service
+- **`gruppe8-traffic-light-devices`**: Traffic Light Device Service
+- **`gruppe8-shared-services`**: Shared services (Time Service, Location Validator)
+- **`ingress-nginx`**: Ingress controller (managed by cluster admin)
+
+**Deployment Steps**
+
+Follow these steps in order:
+
+```bash
+# Step 1: Build and test (optional, but recommended)
+cd task3
+mvn clean install
+
+# Step 2: Create namespaces
+# Important: Quarkus does NOT automatically create namespaces for security reasons.
+kubectl apply -f task3/kubernetes/namespaces/gruppe8-tcc.yaml
+
+# Step 3: Deploy Ingress (before building to avoid conflicts)
+kubectl apply -f task3/kubernetes/ingress.yaml
+
+# Step 4: Build and deploy all services
+mvn clean package -Dquarkus.kubernetes.deploy=true
+
+# Step 5: Test endpoints (can also be used locally without deployment)
+./test-endpoints.sh
+```
+
+**Ingress Configuration**
+
+The shared Ingress exposes:
+
+- `http://tcc.test/api/priority/*` → Priority Service
+- `http://tcc.test/api/status/*` → Status Service
+
+**Step 8: Verify Deployment and Test**
+
+```bash
+# Check all pods across all namespaces
+kubectl get pods -n gruppe8-tcc
+kubectl get pods -n gruppe8-auth-services
+kubectl get pods -n gruppe8-traffic-light-devices
+kubectl get pods -n gruppe8-shared-services
+
+# Check services
+kubectl get services -A | grep gruppe8
+
+# Check ingress
+kubectl get ingress -n gruppe8-tcc
+
+# Run test script
+./test-endpoints.sh
+```
+
+**Service-to-Service Communication**
+
+Services communicate across namespaces using Kubernetes Service Discovery:
+
+- Format: `http://<service-name>.<namespace>.svc.cluster.local:80`
+- Example: `http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:80`
+- Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
+
+### Running Clients
+
+Clients can be run directly after building:
