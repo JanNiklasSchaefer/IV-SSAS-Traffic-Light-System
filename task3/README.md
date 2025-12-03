@@ -65,10 +65,6 @@ Complete overview of all REST endpoints organized by service.
 - **Calls:** This service initiates the call to another service
 - **Called by:** This service receives calls from another service
 
-**Additional Notes**
-
-Nearly all endpoints mentioned are currently missing their authorization and authentication headers. These will be added in a later iteration, when keycloak will be included in the system. 
-
 ### Prerequisites
 
 Download the IV-SSAS-Kind-Cluster. Follow the Instructions there to install and start it : https://git.tu-berlin.de/aot-security/iv-software-security-for-autonomous-systems/examples/iv-ssas-kind-cluster
@@ -209,77 +205,56 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 - Example: `http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:80`
 - Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
 
-### Running Clients
+### Connecting Clients to Kubernetes Cluster
 
-The client applications are simple Java programs that call the public REST API of the TCC system.  
-For development, you can run them **locally** against Quarkus services started in **dev mode**, without deploying the entire system to Kubernetes.
+If your services are deployed in Kubernetes, you have two options to connect clients:
 
-The workflow is always:
-
-1. **Start the backend service** you want to call (usually the TCC Priority Service or TCC Status Service).
-2. **Run one of the clients** in a separate terminal, which will send REST requests to `http://localhost:8080`.
-
----
-
-## 1. Start the TCC Priority Service (Backend)
-
-Open **Terminal 1**, go to the service directory, and run it in Quarkus dev mode:
+**Option 1: Port-Forward (Recommended for local testing)**
 
 ```bash
-cd task3/services/tcc-priority-service
-mvn compile quarkus:dev
-```
+# In a separate terminal, forward the Priority Service port
+kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8080:80
 
-This launches the Priority Service on: http://localhost:8080
-
-Leave this terminal running.
-
----
-
-## 2. Run the Emergency Vehicle Client
-
-Open Terminal 2 and run the Emergency Vehicle Client:
-
-```bash
+# Then run the client normally (it will use http://localhost:8080)
 cd task3/clients/emergency-vehicle-client
 mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient"
 ```
 
-The client will start and interactively ask for any necessary input before sending a priority request to the running Priority Service.
+**Option 2: Use Ingress Hostname (Recommended for production-like testing)**
 
----
-
-## 3. Run Other Clients
-
-Each client runs the same way, enter its folder and execute it:
-
-### Mayor Vehicle Client
+First, add `tcc.test` to your `/etc/hosts` file:
 
 ```bash
-cd task3/clients/mayor-vehicle-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.MayorVehicleClient"
+# On macOS/Linux, edit /etc/hosts (requires sudo)
+sudo nano /etc/hosts
+# or
+sudo vi /etc/hosts
+
+# Add this line:
+127.0.0.1 tcc.test
 ```
 
-### Other Vehicle Client
+**Note:** On Windows, edit `C:\Windows\System32\drivers\etc\hosts` as Administrator.
+
+Then verify the Ingress is working:
 
 ```bash
-cd task3/clients/other-vehicle-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.OtherVehicleClient"
+# Check if Ingress is configured
+kubectl get ingress -n gruppe8-tcc
 
+# Test the Ingress endpoint
+curl http://tcc.test/api/priority/requests -X POST -H "Content-Type: application/json" -d '{"vehicleType":"emergency"}'
 ```
 
-### Pedestrian Client
+Finally, run the client with the Ingress hostname:
 
 ```bash
-cd task3/clients/pedestrian-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.PedestrianClient"
-
+cd task3/clients/emergency-vehicle-client
+mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient" -Dbase.url=http://tcc.test
 ```
 
----
+**Advantages of Ingress:**
 
-## Notes & Tips
-
-- All clients call the public endpoints exposed by the TCC Priority or Status Service.
-- When running locally (without Kubernetes), ensure the service they depend on is running in Quarkus dev mode.
-- If you want to test everything inside Kubernetes instead, use the Ingress and your test script (./test-endpoints.sh).
+- Both Priority and Status services accessible via single hostname
+- Path-based routing (`/api/priority/*` and `/api/status/*`)
+- Production-like setup
