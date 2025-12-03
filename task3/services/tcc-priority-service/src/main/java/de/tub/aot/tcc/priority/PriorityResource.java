@@ -39,13 +39,18 @@ public class PriorityResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRequestStatus(@PathParam("request_id") String requestId) {
         RequestStatus status = requestStore.get(requestId);
+
         
+        
+        /*
         if (status == null) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "NOT_FOUND");
             error.put("message", "Request with ID " + requestId + " not found");
             return Response.status(Response.Status.NOT_FOUND).entity(error).build();
         }
+        */
+        
         
         return Response.ok(status).build();
     }
