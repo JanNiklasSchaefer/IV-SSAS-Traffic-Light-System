@@ -13,7 +13,7 @@ import jakarta.ws.rs.Consumes;
 
 @Path("/api/device")
 @ApplicationScoped
-public class TrafficState {
+public class TrafficLightService {
 
     @GET
     @Path("/traffic-state")
