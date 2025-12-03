@@ -163,10 +163,10 @@ mvn clean install
 
 # Step 2: Create namespaces
 # Important: Quarkus does NOT automatically create namespaces for security reasons.
-kubectl apply -f task3/kubernetes/namespaces/gruppe8-tcc.yaml
+kubectl apply -f kubernetes/namespaces/gruppe8-tcc.yaml
 
 # Step 3: Deploy Ingress (before building to avoid conflicts)
-kubectl apply -f task3/kubernetes/ingress.yaml
+kubectl apply -f kubernetes/ingress.yaml
 
 # Step 4: Build and deploy all services
 mvn clean package -Dquarkus.kubernetes.deploy=true
