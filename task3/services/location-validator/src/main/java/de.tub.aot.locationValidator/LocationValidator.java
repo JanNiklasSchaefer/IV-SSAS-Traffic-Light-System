@@ -21,7 +21,7 @@ public class LocationValidator {
     @Path("/vehicle")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response changeState(@QueryParam("vehicle_id") String vehicleId, @QueryParam("coordinates") double[] coordinates) {
+    public Response changeState(@QueryParam("vehicle_id") String vehicleId, Object cords) {
         if(locations.validateLocation()) {
             return Response.ok().build();
         }
