@@ -65,6 +65,10 @@ Complete overview of all REST endpoints organized by service.
 - **Calls:** This service initiates the call to another service
 - **Called by:** This service receives calls from another service
 
+**Additional Note**
+
+Most Endpoints are currently missing their authorization and authentication headers. These will be added in a later iteration when keycloak will be deployed.
+
 ### Prerequisites
 
 Download the IV-SSAS-Kind-Cluster. Follow the Instructions there to install and start it : https://git.tu-berlin.de/aot-security/iv-software-security-for-autonomous-systems/examples/iv-ssas-kind-cluster
