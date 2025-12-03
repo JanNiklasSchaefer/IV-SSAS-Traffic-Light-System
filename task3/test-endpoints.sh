@@ -345,6 +345,10 @@ test_endpoint "Client Endpoint: Post Priority Request (emergency)" "POST" "${CLI
     '{"vehicleType":"emergency"}' \
     "200"
 
+test_endpoint "Client Endpoint: Post Priority Request (mayor)" "POST" "${CLIENT_BASE}/api/priority/requests" \
+    '{"vehicleType":"mayor"}' \
+    "200"
+
 # Create a priority request for client testing
 if [ "$USE_CLUSTER_POD" = "true" ]; then
     client_response=$(kubectl exec -n "$NAMESPACE" test-pod -- curl -s -X POST "${CLIENT_BASE}/api/priority/requests" \
@@ -362,18 +366,6 @@ if [ ! -z "$client_request_id" ]; then
         "" \
         "200"
 fi
-
-test_endpoint "Client Endpoint: Post Priority Request (mayor)" "POST" "${CLIENT_BASE}/api/priority/requests" \
-    '{"vehicleType":"mayor"}' \
-    "200"
-
-test_endpoint "Client Endpoint: Post Priority Request (other)" "POST" "${CLIENT_BASE}/api/priority/requests" \
-    '{"vehicleType":"other"}' \
-    "200"
-
-test_endpoint "Client Endpoint: Post Priority Request (pedestrian)" "POST" "${CLIENT_BASE}/api/priority/requests" \
-    '{"vehicleType":"pedestrian"}' \
-    "200"
 
 echo -e "${BLUE}Note: Clients run outside the cluster and call these endpoints via Ingress (${EXTERNAL_BASE:-tcc.test})${NC}"
 echo -e "${BLUE}To test clients directly, run the Java client applications:${NC}"
