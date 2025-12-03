@@ -41,10 +41,6 @@ Complete overview of all REST endpoints organized by service.
 
 | Service | Type | Method | Path | Purpose | Query Parameters | Parameters / Request Body | Response | Communication |
 |---------|------|--------|------|---------|------------------|---------------------------|----------|---------------|
-| **Clients (outside cluster)** | External | `GET` | `/api/status/traffic` | Get Traffic Status | `{"vehicle": Boolean}` |  | `{"traffic_status": {...}}` | Vehicle Clients → Ingress → TCC Status Service |
-|  | External | `POST` | `/api/priority/requests` | Post Priority Request |  | `{"priority_request": {...}}` | `{"status": String}` | Vehicle Clients → Ingress → TCC Priority Service |
-|  | External | `GET` | `/api/priority/requests/{request_id}` | Get Request Status | `{"request_id": String}`  | | `{"request_status": {...}}` | Vehicle Clients → Ingress → TCC Priority Service |
-|  |  |  |  |  |  | Note: Each client wraps user input and calls these public endpoints via Ingress hostname |  |  |
 | **TCC Priority Service** | Internal | `POST` | `/api/state/change` | Trigger state change |  | `{"state_change_request": {...}}` | `{"status_code": {...}}` | Calls TCC State Controller |
 |  | Internal | `POST` | `/api/audit/events` | Log priority request | `{"audit_event" : {...} }` |  | `{"status_code": {...}}` | Calls TCC Audit Service |
 | **TCC Status Service** | Internal | `GET` | `/api/device/traffic-state` | Retrieve current state | `{"vehicle" : Boolean }`  | - | `{"traffic_status": {...}}` | Calls Traffic Light Device Service |
