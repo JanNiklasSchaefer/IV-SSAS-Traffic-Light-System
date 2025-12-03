@@ -26,7 +26,7 @@ task3/
 │   ├── test-pod.yaml        # Test pod for cluster-internal testing
 │   └── namespaces/          # Namespace definitions
 │       └── gruppe8-tcc.yaml
-├── test-endpoints.sh        # Comprehensive endpoint testing script
+├── test-endpoints.sh        # Comprehensive endpoint testing script (AI-generated)
 ├── pom.xml                  # Parent POM for all modules
 └── README.md                # You are here
 ```
@@ -39,24 +39,24 @@ Complete overview of all REST endpoints organized by service.
 
 Complete overview of all REST endpoints organized by service.
 
-| Service | Type | Method | Path | Purpose | Query Parameters | Parameters / Request Body | Response | Communication |
-|---------|------|--------|------|---------|------------------|---------------------------|----------|---------------|
-| **TCC Priority Service** | Internal | `POST` | `/api/state/change` | Trigger state change |  | `{"state_change_request": {...}}` | `{"status_code": {...}}` | Calls TCC State Controller |
-|  | Internal | `POST` | `/api/audit/events` | Log priority request | `{"audit_event" : {...} }` |  | `{"status_code": {...}}` | Calls TCC Audit Service |
-| **TCC Status Service** | Internal | `GET` | `/api/device/traffic-state` | Retrieve current state | `{"vehicle" : Boolean }`  | - | `{"traffic_status": {...}}` | Calls Traffic Light Device Service |
-| **TCC State Controller** | Internal | `POST` | `/api/state/change` | Execute state change command |  | `{"traffic_status": {...}}` | `{"status_code": {...}}` | Called by TCC Priority Service |
-|  | Internal | `POST` | `/api/device/change-state` | Apply state change to device |  | `{"traffic_status": {...}}` | `{"status_code": {...}}` | Calls Traffic Light Device Service |
-|  | Internal | `POST` | `/api/audit/events` | Log state change |  | `{"audit_event" : {...}}` | `{"status_code": {...}}` | Calls TCC Audit Service |
-| **TCC Auth Service** | Internal | `POST` | `/api/auth/token` | Handle Token Requests | `{"grant_type": String}` | `{"token_request": {...}}` | `{"refresh_token": String, "access_token": String}` | Called by all Services |
-|  | Internal | `POST` | `/api/auth/introspect` | Validate Auth Data | `{"access_token": String}` |  | `{"status_code": {...}}` | Called by all Services |
-|  | Internal | `POST` | `/api/auth/userinfo` | Get User Info | `{"access_token": String}` |  | `{"user_info": {...}}` | Called by all Services |
-|  | External | - | OIDC/OAuth2 | Proxy to Keycloak |  | OAuth2/OIDC protocol | Keycloak tokens | Calls Keycloak (Task 5) |
-| **TCC Audit Service** | Internal | `POST` | `/api/audit/events` | Log audit event |  | `{"audit_event" : {...}}` | `{"status_code": {...}}` | Called by TCC Priority Service, TCC State Controller |
-|  | Internal | `GET` | `/api/audit/logs` | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |  | `{"audit_logs": {...}}` | TODO: Admin Service (Task 5) |
-| **Traffic Light Device Service** | Internal | `GET` | `/api/device/traffic-state` | Get current traffic light state |  |  | `{"traffic_status": {...}}` | Called by TCC Status Service |
-|  | Internal | `POST` | `/api/device/change-state` | Apply state change | `{"state": String}` |  | `{"status_code": {...}}` | Called by TCC State Controller |
-| **Location Validator Service** | Internal | `POST` | `/api/location/vehicle` | Validate vehicle location | `{"vehicle_id": String}` | `{"coordinates": {...}}` | `{"status_code": {...}}` | Called by TCC Priority Service |
-| **Time Service** | Internal | `POST` | `/api/time/validate` | Validate timestamp | `{"timestamp": "..."}`  | | `{"status_code": {...}}` | Called by TCC Priority Service |
+| Service                          | Type     | Method | Path                        | Purpose                               | Query Parameters             | Parameters / Request Body         | Response                                            | Communication                                        |
+| -------------------------------- | -------- | ------ | --------------------------- | ------------------------------------- | ---------------------------- | --------------------------------- | --------------------------------------------------- | ---------------------------------------------------- |
+| **TCC Priority Service**         | Internal | `POST` | `/api/state/change`         | Trigger state change                  |                              | `{"state_change_request": {...}}` | `{"status_code": {...}}`                            | Calls TCC State Controller                           |
+|                                  | Internal | `POST` | `/api/audit/events`         | Log priority request                  | `{"audit_event" : {...} }`   |                                   | `{"status_code": {...}}`                            | Calls TCC Audit Service                              |
+| **TCC Status Service**           | Internal | `GET`  | `/api/device/traffic-state` | Retrieve current state                | `{"vehicle" : Boolean }`     | -                                 | `{"traffic_status": {...}}`                         | Calls Traffic Light Device Service                   |
+| **TCC State Controller**         | Internal | `POST` | `/api/state/change`         | Execute state change command          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
+|                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change to device          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Calls Traffic Light Device Service                   |
+|                                  | Internal | `POST` | `/api/audit/events`         | Log state change                      |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Calls TCC Audit Service                              |
+| **TCC Auth Service**             | Internal | `POST` | `/api/auth/token`           | Handle Token Requests                 | `{"grant_type": String}`     | `{"token_request": {...}}`        | `{"refresh_token": String, "access_token": String}` | Called by all Services                               |
+|                                  | Internal | `POST` | `/api/auth/introspect`      | Validate Auth Data                    | `{"access_token": String}`   |                                   | `{"status_code": {...}}`                            | Called by all Services                               |
+|                                  | Internal | `POST` | `/api/auth/userinfo`        | Get User Info                         | `{"access_token": String}`   |                                   | `{"user_info": {...}}`                              | Called by all Services                               |
+|                                  | External | -      | OIDC/OAuth2                 | Proxy to Keycloak                     |                              | OAuth2/OIDC protocol              | Keycloak tokens                                     | Calls Keycloak (Task 5)                              |
+| **TCC Audit Service**            | Internal | `POST` | `/api/audit/events`         | Log audit event                       |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Called by TCC Priority Service, TCC State Controller |
+|                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
+| **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                   | `{"traffic_status": {...}}`                         | Called by TCC Status Service                         |
+|                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change                    | `{"state": String}`          |                                   | `{"status_code": {...}}`                            | Called by TCC State Controller                       |
+| **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             | `{"vehicle_id": String}`     | `{"coordinates": {...}}`          | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
+| **Time Service**                 | Internal | `POST` | `/api/time/validate`        | Validate timestamp                    | `{"timestamp": "..."}`       |                                   | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
 
 **Legend:**
 
@@ -71,7 +71,7 @@ Download the IV-SSAS-Kind-Cluster. Follow the Instructions there to install and 
 
 The Cluster must be running on your device before you execute the next steps.
 
-Additionally you need: 
+Additionally you need:
 
 - Docker Desktop or Docker Engine running
 - Local Docker registry (optional, for pushing images)
@@ -212,7 +212,7 @@ For development, you can run them **locally** against Quarkus services started i
 
 The workflow is always:
 
-1. **Start the backend service** you want to call (usually the TCC Priority Service or TCC Status Service).  
+1. **Start the backend service** you want to call (usually the TCC Priority Service or TCC Status Service).
 2. **Run one of the clients** in a separate terminal, which will send REST requests to `http://localhost:8080`.
 
 ---
@@ -233,26 +233,31 @@ Leave this terminal running.
 ---
 
 ## 2. Run the Emergency Vehicle Client
+
 Open Terminal 2 and run the Emergency Vehicle Client:
 
 ```bash
 cd task3/clients/emergency-vehicle-client
 mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient"
 ```
+
 The client will start and interactively ask for any necessary input before sending a priority request to the running Priority Service.
 
 ---
 
 ## 3. Run Other Clients
+
 Each client runs the same way, enter its folder and execute it:
 
 ### Mayor Vehicle Client
+
 ```bash
 cd task3/clients/mayor-vehicle-client
 mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.MayorVehicleClient"
 ```
 
 ### Other Vehicle Client
+
 ```bash
 cd task3/clients/other-vehicle-client
 mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.OtherVehicleClient"
@@ -260,6 +265,7 @@ mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.OtherVehicleClient"
 ```
 
 ### Pedestrian Client
+
 ```bash
 cd task3/clients/pedestrian-client
 mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.PedestrianClient"
@@ -273,4 +279,3 @@ mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.PedestrianClient"
 - All clients call the public endpoints exposed by the TCC Priority or Status Service.
 - When running locally (without Kubernetes), ensure the service they depend on is running in Quarkus dev mode.
 - If you want to test everything inside Kubernetes instead, use the Ingress and your test script (./test-endpoints.sh).
-
