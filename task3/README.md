@@ -279,3 +279,57 @@ mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.PedestrianClient"
 - All clients call the public endpoints exposed by the TCC Priority or Status Service.
 - When running locally (without Kubernetes), ensure the service they depend on is running in Quarkus dev mode.
 - If you want to test everything inside Kubernetes instead, use the Ingress and your test script (./test-endpoints.sh).
+
+### Connecting Clients to Kubernetes Cluster
+
+If your services are deployed in Kubernetes, you have two options to connect clients:
+
+**Option 1: Port-Forward (Recommended for local testing)**
+
+```bash
+# In a separate terminal, forward the Priority Service port
+kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8080:80
+
+# Then run the client normally (it will use http://localhost:8080)
+cd task3/clients/emergency-vehicle-client
+mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient"
+```
+
+**Option 2: Use Ingress Hostname (Recommended for production-like testing)**
+
+First, add `tcc.test` to your `/etc/hosts` file:
+
+```bash
+# On macOS/Linux, edit /etc/hosts (requires sudo)
+sudo nano /etc/hosts
+# or
+sudo vi /etc/hosts
+
+# Add this line:
+127.0.0.1 tcc.test
+```
+
+**Note:** On Windows, edit `C:\Windows\System32\drivers\etc\hosts` as Administrator.
+
+Then verify the Ingress is working:
+
+```bash
+# Check if Ingress is configured
+kubectl get ingress -n gruppe8-tcc
+
+# Test the Ingress endpoint
+curl http://tcc.test/api/priority/requests -X POST -H "Content-Type: application/json" -d '{"vehicleType":"emergency"}'
+```
+
+Finally, run the client with the Ingress hostname:
+
+```bash
+cd task3/clients/emergency-vehicle-client
+mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient" -Dbase.url=http://tcc.test
+```
+
+**Advantages of Ingress:**
+
+- Both Priority and Status services accessible via single hostname
+- Path-based routing (`/api/priority/*` and `/api/status/*`)
+- Production-like setup
