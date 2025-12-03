@@ -1,4 +1,4 @@
-package de.tub.aot.tcc.auth;
+package de.tub.aot.auth.service;
 
 import java.math.BigInteger;
 

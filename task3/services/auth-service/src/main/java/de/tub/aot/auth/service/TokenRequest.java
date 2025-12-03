@@ -1,4 +1,4 @@
-package de.tub.aot.tcc.auth;
+package de.tub.aot.auth.service;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 

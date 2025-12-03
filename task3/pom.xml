@@ -12,7 +12,7 @@
       <module>services/tcc-priority-service</module>
       <module>services/tcc-state-controller</module>
       <module>services/tcc-status-service</module>
-      <module>services/tcc-auth-service</module>
+      <module>services/auth-service</module>
       <module>services/tcc-audit-service</module>
       <module>services/traffic-light-device-service</module>
       <module>services/location-validator</module>
