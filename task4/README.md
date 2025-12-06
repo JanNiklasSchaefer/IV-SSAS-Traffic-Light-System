@@ -11,7 +11,6 @@ task4/
 │   ├── tcc-priority-service/        # → gruppe8-tcc namespace
 │   ├── tcc-state-controller/         # → gruppe8-tcc namespace
 │   ├── tcc-status-service/           # → gruppe8-tcc namespace
-│   ├── auth-service/                 # → gruppe8-auth-services namespace
 │   ├── tcc-audit-service/           # → gruppe8-tcc namespace
 │   ├── traffic-light-device-service/ # → gruppe8-traffic-light-devices namespace
 │   ├── time-service/                  # → gruppe8-shared-services namespace
@@ -47,10 +46,6 @@ Complete overview of all REST endpoints organized by service.
 | **TCC State Controller**         | Internal | `POST` | `/api/state/change`         | Execute state change command          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
 |                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change to device          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Calls Traffic Light Device Service                   |
 |                                  | Internal | `POST` | `/api/audit/events`         | Log state change                      |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Calls TCC Audit Service                              |
-| **TCC Auth Service**             | Internal | `POST` | `/api/auth/token`           | Handle Token Requests                 | `{"grant_type": String}`     | `{"token_request": {...}}`        | `{"refresh_token": String, "access_token": String}` | Called by all Services                               |
-|                                  | Internal | `POST` | `/api/auth/introspect`      | Validate Auth Data                    | `{"access_token": String}`   |                                   | `{"status_code": {...}}`                            | Called by all Services                               |
-|                                  | Internal | `POST` | `/api/auth/userinfo`        | Get User Info                         | `{"access_token": String}`   |                                   | `{"user_info": {...}}`                              | Called by all Services                               |
-|                                  | External | -      | OIDC/OAuth2                 | Proxy to Keycloak                     |                              | OAuth2/OIDC protocol              | Keycloak tokens                                     | Calls Keycloak (Task 5)                              |
 | **TCC Audit Service**            | Internal | `POST` | `/api/audit/events`         | Log audit event                       |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Called by TCC Priority Service, TCC State Controller |
 |                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 4) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
 | **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                   | `{"traffic_status": {...}}`                         | Called by TCC Status Service                         |
@@ -143,10 +138,11 @@ mvn clean package -Dquarkus.kubernetes.deploy=false
 Services are organized into multiple namespaces for better separation:
 
 - **`gruppe8-tcc`**: TCC core services (Priority, State Controller, Status, Audit)
-- **`gruppe8-auth-services`**: Auth Service
 - **`gruppe8-traffic-light-devices`**: Traffic Light Device Service
 - **`gruppe8-shared-services`**: Shared services (Time Service, Location Validator)
 - **`ingress-nginx`**: Ingress controller (managed by cluster admin)
+
+**Note:** Authentication is handled by Keycloak (Task 5), not a separate auth-service.
 
 **Deployment Steps**
 
@@ -183,7 +179,6 @@ The shared Ingress exposes:
 ```bash
 # Check all pods across all namespaces
 kubectl get pods -n gruppe8-tcc
-kubectl get pods -n gruppe8-auth-services
 kubectl get pods -n gruppe8-traffic-light-devices
 kubectl get pods -n gruppe8-shared-services
 
@@ -203,7 +198,6 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 
 - Format: `http://<service-name>.<namespace>.svc.cluster.local:80`
 - Example: `http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:80`
-- Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
 
 ### Running Clients
 

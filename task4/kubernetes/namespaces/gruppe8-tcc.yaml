@@ -23,12 +23,3 @@ metadata:
   labels:
     name: gruppe8-shared-services
     trust-ca: iv-ssas
-
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gruppe8-auth-services
-  labels:
-    name: gruppe8-auth-services
-    trust-ca: iv-ssas

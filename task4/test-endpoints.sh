@@ -80,9 +80,6 @@ if [ "$ENVIRONMENT" = "cluster" ]; then
     STATUS_BASE="http://gruppe8-tcc-status-service.${TCC_NAMESPACE}.svc.cluster.local:80"
     PRIORITY_BASE="http://gruppe8-tcc-priority-service.${TCC_NAMESPACE}.svc.cluster.local:80"
     AUDIT_BASE="http://gruppe8-tcc-audit-service.${TCC_NAMESPACE}.svc.cluster.local:80"
-    # Auth Service in gruppe8-auth-services namespace
-    AUTH_NAMESPACE="gruppe8-auth-services"
-    AUTH_BASE="http://gruppe8-tcc-auth-service.${AUTH_NAMESPACE}.svc.cluster.local:80"
     # Shared Services in gruppe8-shared-services namespace
     SHARED_NAMESPACE="gruppe8-shared-services"
     TIME_BASE="http://gruppe8-time-service.${SHARED_NAMESPACE}.svc.cluster.local:80"
@@ -102,7 +99,6 @@ else
     # If custom ports are set via environment variables, use those
     DEFAULT_PORT=8080
     
-    AUTH_PORT=${AUTH_PORT:-$DEFAULT_PORT}
     STATE_PORT=${STATE_PORT:-$DEFAULT_PORT}
     STATUS_PORT=${STATUS_PORT:-$DEFAULT_PORT}
     TIME_PORT=${TIME_PORT:-$DEFAULT_PORT}
@@ -131,7 +127,6 @@ else
     
     # Use detected or default ports
     EXTERNAL_BASE="http://localhost:${PRIORITY_PORT}"
-    AUTH_BASE="http://localhost:${AUTH_PORT}"
     STATE_BASE="http://localhost:${STATE_PORT}"
     STATUS_BASE="http://localhost:${STATUS_PORT}"
     TIME_BASE="http://localhost:${TIME_PORT}"
@@ -144,7 +139,7 @@ else
     
     echo -e "${YELLOW}Note: All services use port 8080 by default (Quarkus standard)${NC}"
     echo -e "${YELLOW}If you need custom ports, set environment variables:${NC}"
-    echo -e "${YELLOW}  AUTH_PORT=8081 STATE_PORT=8082 ... ./test-endpoints.sh${NC}\n"
+    echo -e "${YELLOW}  STATE_PORT=8082 STATUS_PORT=8083 TIME_PORT=8084 DEVICE_PORT=8085 PRIORITY_PORT=8086 ./test-endpoints.sh${NC}\n"
 fi
 
 echo -e "${YELLOW}=== Testing TCC Microservices Endpoints ===${NC}\n"
@@ -199,22 +194,10 @@ test_endpoint() {
 # Check if services are running
 echo -e "${YELLOW}Checking if services are running...${NC}\n"
 
-# Test Auth Service
-echo -e "${YELLOW}=== 1. Auth Service Tests ===${NC}"
-test_endpoint "Get Token" "POST" "${AUTH_BASE}/api/auth/token" \
-    '{"clientId":"test-client","clientSecret":"test-secret","username":"test","password":"test","grant_type":"password"}' \
-    "200"
-
-test_endpoint "Introspect Token" "POST" "${AUTH_BASE}/api/auth/introspect" \
-    '"test-token"' \
-    "200"
-
-test_endpoint "User Info" "POST" "${AUTH_BASE}/api/auth/userinfo" \
-    '"test-access-token"' \
-    "200"
+# Note: Auth Service removed - authentication handled by Keycloak (Task 5)
 
 # Test State Controller
-echo -e "${YELLOW}=== 2. State Controller Tests ===${NC}"
+echo -e "${YELLOW}=== 1. State Controller Tests ===${NC}"
 test_endpoint "Change State" "POST" "${STATE_BASE}/api/state/change" \
     '{"command":"change-to-red"}' \
     "200"
@@ -228,7 +211,7 @@ test_endpoint "Log Audit Event" "POST" "${STATE_BASE}/api/state/audit/events" \
     "200"
 
 # Test Status Service
-echo -e "${YELLOW}=== 3. Status Service Tests ===${NC}"
+echo -e "${YELLOW}=== 2. Status Service Tests ===${NC}"
 test_endpoint "Get Traffic Status (no vehicle)" "GET" "${STATUS_BASE}/api/status/traffic" \
     "" \
     "200"
@@ -238,7 +221,7 @@ test_endpoint "Get Traffic Status (with vehicle)" "GET" "${STATUS_BASE}/api/stat
     "200"
 
 # Test Time Service
-echo -e "${YELLOW}=== 4. Time Service Tests ===${NC}"
+echo -e "${YELLOW}=== 3. Time Service Tests ===${NC}"
 # Get current time in milliseconds (convert seconds to milliseconds)
 current_timestamp=$(($(date +%s) * 1000))
 test_endpoint "Validate Time" "POST" "${TIME_BASE}/api/time/validate" \
@@ -252,7 +235,7 @@ test_endpoint "Validate Old Time (should fail)" "POST" "${TIME_BASE}/api/time/va
     "400"
 
 # Test Traffic Light Device Service
-echo -e "${YELLOW}=== 5. Traffic Light Device Service Tests ===${NC}"
+echo -e "${YELLOW}=== 4. Traffic Light Device Service Tests ===${NC}"
 test_endpoint "Get Traffic State" "GET" "${DEVICE_BASE}/api/device/traffic-state" \
     "" \
     "200"
@@ -266,7 +249,7 @@ test_endpoint "Change Device State (red)" "POST" "${DEVICE_BASE}/api/device/chan
     "200"
 
 # Test Audit Service
-echo -e "${YELLOW}=== 6. Audit Service Tests ===${NC}"
+echo -e "${YELLOW}=== 5. Audit Service Tests ===${NC}"
 test_endpoint "Log Audit Event" "POST" "${AUDIT_BASE}/api/audit/events" \
     '{"request":{"id":"test-123"},"timestamp":"2024-01-01T12:00:00Z"}' \
     "200"
@@ -276,13 +259,13 @@ test_endpoint "Get Audit Logs" "GET" "${AUDIT_BASE}/api/audit/logs" \
     "200"
 
 # Test Location Validator Service
-echo -e "${YELLOW}=== 7. Location Validator Service Tests ===${NC}"
+echo -e "${YELLOW}=== 6. Location Validator Service Tests ===${NC}"
 test_endpoint "Validate Vehicle Location" "POST" "${LOCATION_BASE}/api/location/vehicle" \
     '{"vehicleId":"test-vehicle","coordinates":{"latitude":52.5,"longitude":13.4}}' \
     "200"
 
 # Test Priority Service (External endpoints called by clients)
-echo -e "${YELLOW}=== 8. Priority Service Tests (External) ===${NC}"
+echo -e "${YELLOW}=== 7. Priority Service Tests (External) ===${NC}"
 # First create a request to get a real requestId
 if [ "$USE_CLUSTER_POD" = "true" ]; then
     response=$(kubectl exec -n "$NAMESPACE" test-pod -- curl -s -X POST "${PRIORITY_BASE}/api/priority/requests" \
@@ -315,7 +298,7 @@ else
 fi
 
 # Test Clients (simulate client calls to external endpoints)
-echo -e "${YELLOW}=== 9. Client Tests (External Endpoints) ===${NC}"
+echo -e "${YELLOW}=== 8. Client Tests (External Endpoints) ===${NC}"
 echo -e "${BLUE}Testing endpoints that clients call via Ingress${NC}\n"
 
 # Note: Client endpoints are tested via Priority Service (which clients call through Ingress)
@@ -387,7 +370,6 @@ else
     echo "  3. Run this script again - it will auto-detect the cluster"
     echo ""
     echo -e "${YELLOW}For local testing, make sure all services are running in dev mode:${NC}"
-    echo "  cd services/auth-service && mvn quarkus:dev"
     echo "  cd services/tcc-state-controller && mvn quarkus:dev"
     echo "  cd services/tcc-status-service && mvn quarkus:dev"
     echo "  cd services/time-service && mvn quarkus:dev"
@@ -395,6 +377,6 @@ else
     echo "  cd services/tcc-priority-service && mvn quarkus:dev"
     echo ""
     echo -e "${YELLOW}Or use different ports by setting environment variables:${NC}"
-    echo "  AUTH_PORT=8081 STATE_PORT=8082 STATUS_PORT=8083 TIME_PORT=8084 DEVICE_PORT=8085 PRIORITY_PORT=8086 ./test-endpoints.sh"
+    echo "  STATE_PORT=8082 STATUS_PORT=8083 TIME_PORT=8084 DEVICE_PORT=8085 PRIORITY_PORT=8086 ./test-endpoints.sh"
 fi
 
