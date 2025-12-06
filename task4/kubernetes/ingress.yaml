@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gruppe8-tcc-ingress
+  namespace: gruppe8-tcc
+  annotations:
+    # No rewrite needed - services already expect /api/priority and /api/status paths
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: tcc.test
+      http:
+        paths:
+          - path: /api/priority
+            pathType: Prefix
+            backend:
+              service:
+                name: gruppe8-tcc-priority-service
+                port:
+                  number: 80
+          - path: /api/status
+            pathType: Prefix
+            backend:
+              service:
+                name: gruppe8-tcc-status-service
+                port:
+                  number: 80

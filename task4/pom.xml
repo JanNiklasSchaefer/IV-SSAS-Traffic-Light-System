@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+   <groupId>de.tub.aot</groupId>
+   <artifactId>gruppe8-task4</artifactId>
+   <version>1.0.0-SNAPSHOT</version>
+   <packaging>pom</packaging>
+   
+   <modules>
+      <module>services/tcc-priority-service</module>
+      <module>services/tcc-state-controller</module>
+      <module>services/tcc-status-service</module>
+      <module>services/tcc-audit-service</module>
+      <module>services/traffic-light-device-service</module>
+      <module>services/location-validator</module>
+      <module>services/time-service</module>
+      <module>clients/emergency-vehicle-client</module>
+      <module>clients/mayor-vehicle-client</module>
+      <module>clients/other-vehicle-client</module>
+      <module>clients/pedestrian-client</module>
+   </modules>
+   
+   <properties>
+      <compiler-plugin.version>3.12.1</compiler-plugin.version>
+      <maven.compiler.release>21</maven.compiler.release>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+   </properties>
+</project>
+
