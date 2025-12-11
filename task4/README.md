@@ -1,16 +1,17 @@
-## Task 4 – Microservices, Clients, and Deployment Guide
+## Task 3 – Microservices, Clients, and Deployment Guide
 
-This folder contains the working artifacts for Task 4 of the SAM traffic-light assignment, building upon Task 3.  
+This folder contains the working artifacts for Task 3 of the SAM traffic-light assignment.  
 Goal: deliver runnable microservices, Kubernetes manifests, and basic clients (even with stubbed logic) that exercise the REST API defined in Task 2, plus documentation and a release package.
 
 ### Repository Layout
 
 ```
-task4/
+task3/
 ├── services/                # Source & Docker context for each microservice
 │   ├── tcc-priority-service/        # → gruppe8-tcc namespace
 │   ├── tcc-state-controller/         # → gruppe8-tcc namespace
 │   ├── tcc-status-service/           # → gruppe8-tcc namespace
+│   ├── auth-service/                 # → gruppe8-auth-services namespace
 │   ├── tcc-audit-service/           # → gruppe8-tcc namespace
 │   ├── traffic-light-device-service/ # → gruppe8-traffic-light-devices namespace
 │   ├── time-service/                  # → gruppe8-shared-services namespace
@@ -46,8 +47,12 @@ Complete overview of all REST endpoints organized by service.
 | **TCC State Controller**         | Internal | `POST` | `/api/state/change`         | Execute state change command          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
 |                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change to device          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Calls Traffic Light Device Service                   |
 |                                  | Internal | `POST` | `/api/audit/events`         | Log state change                      |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Calls TCC Audit Service                              |
+| **TCC Auth Service**             | Internal | `POST` | `/api/auth/token`           | Handle Token Requests                 | `{"grant_type": String}`     | `{"token_request": {...}}`        | `{"refresh_token": String, "access_token": String}` | Called by all Services                               |
+|                                  | Internal | `POST` | `/api/auth/introspect`      | Validate Auth Data                    | `{"access_token": String}`   |                                   | `{"status_code": {...}}`                            | Called by all Services                               |
+|                                  | Internal | `POST` | `/api/auth/userinfo`        | Get User Info                         | `{"access_token": String}`   |                                   | `{"user_info": {...}}`                              | Called by all Services                               |
+|                                  | External | -      | OIDC/OAuth2                 | Proxy to Keycloak                     |                              | OAuth2/OIDC protocol              | Keycloak tokens                                     | Calls Keycloak (Task 5)                              |
 | **TCC Audit Service**            | Internal | `POST` | `/api/audit/events`         | Log audit event                       |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Called by TCC Priority Service, TCC State Controller |
-|                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 4) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
+|                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
 | **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                   | `{"traffic_status": {...}}`                         | Called by TCC Status Service                         |
 |                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change                    | `{"state": String}`          |                                   | `{"status_code": {...}}`                            | Called by TCC State Controller                       |
 | **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             | `{"vehicle_id": String}`     | `{"coordinates": {...}}`          | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
@@ -59,6 +64,10 @@ Complete overview of all REST endpoints organized by service.
 - **Internal:** Service-to-service communication within the cluster
 - **Calls:** This service initiates the call to another service
 - **Called by:** This service receives calls from another service
+
+**Additional Note:**
+
+Most Endpoints are currently missing their authorization and authentication headers. These will be added in a later iteration when keycloak will be deployed.
 
 ### Prerequisites
 
@@ -73,14 +82,14 @@ Additionally you need:
 
 ### Building the Project
 
-The project can be built using Maven from the `task4/` directory.
+The project can be built using Maven from the `task3/` directory.
 
 #### Build and Test
 
 To build all services and clients and run tests:
 
 ```bash
-cd task4
+cd task3
 mvn clean install
 ```
 
@@ -95,7 +104,7 @@ This will:
 To build all services and clients including Docker container images:
 
 ```bash
-cd task4
+cd task3
 mvn clean package
 ```
 
@@ -121,13 +130,13 @@ This will:
 Kubernetes manifests are automatically generated during the build process. They can be found in:
 
 ```
-task4/services/<service-name>/target/kubernetes/kubernetes.yml
+task3/services/<service-name>/target/kubernetes/kubernetes.yml
 ```
 
 To generate manifests without deploying:
 
 ```bash
-cd task4
+cd task3
 mvn clean package -Dquarkus.kubernetes.deploy=false
 ```
 
@@ -138,11 +147,10 @@ mvn clean package -Dquarkus.kubernetes.deploy=false
 Services are organized into multiple namespaces for better separation:
 
 - **`gruppe8-tcc`**: TCC core services (Priority, State Controller, Status, Audit)
+- **`gruppe8-auth-services`**: Auth Service
 - **`gruppe8-traffic-light-devices`**: Traffic Light Device Service
 - **`gruppe8-shared-services`**: Shared services (Time Service, Location Validator)
 - **`ingress-nginx`**: Ingress controller (managed by cluster admin)
-
-**Note:** Authentication is handled by Keycloak (Task 5), not a separate auth-service.
 
 **Deployment Steps**
 
@@ -150,7 +158,7 @@ Follow these steps in order:
 
 ```bash
 # Step 1: Build and test (optional, but recommended)
-cd task4
+cd task3
 mvn clean install
 
 # Step 2: Create namespaces
@@ -179,6 +187,7 @@ The shared Ingress exposes:
 ```bash
 # Check all pods across all namespaces
 kubectl get pods -n gruppe8-tcc
+kubectl get pods -n gruppe8-auth-services
 kubectl get pods -n gruppe8-traffic-light-devices
 kubectl get pods -n gruppe8-shared-services
 
@@ -198,98 +207,31 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 
 - Format: `http://<service-name>.<namespace>.svc.cluster.local:80`
 - Example: `http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:80`
-
-### Running Clients
-
-The client applications are simple Java programs that call the public REST API of the TCC system.  
-For development, you can run them **locally** against Quarkus services started in **dev mode**, without deploying the entire system to Kubernetes.
-
-The workflow is always:
-
-1. **Start the backend service** you want to call (usually the TCC Priority Service or TCC Status Service).
-2. **Run one of the clients** in a separate terminal, which will send REST requests to `http://localhost:8080`.
-
----
-
-## 1. Start the TCC Priority Service (Backend)
-
-Open **Terminal 1**, go to the service directory, and run it in Quarkus dev mode:
-
-```bash
-cd task4/services/tcc-priority-service
-mvn compile quarkus:dev
-```
-
-This launches the Priority Service on: http://localhost:8080
-
-Leave this terminal running.
-
----
-
-## 2. Run the Emergency Vehicle Client
-
-Open Terminal 2 and run the Emergency Vehicle Client:
-
-```bash
-cd task4/clients/emergency-vehicle-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient"
-```
-
-The client will start and interactively ask for any necessary input before sending a priority request to the running Priority Service.
-
----
-
-## 3. Run Other Clients
-
-Each client runs the same way, enter its folder and execute it:
-
-### Mayor Vehicle Client
-
-```bash
-cd task4/clients/mayor-vehicle-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.MayorVehicleClient"
-```
-
-### Other Vehicle Client
-
-```bash
-cd task4/clients/other-vehicle-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.OtherVehicleClient"
-
-```
-
-### Pedestrian Client
-
-```bash
-cd task4/clients/pedestrian-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.PedestrianClient"
-
-```
-
----
-
-## Notes & Tips
-
-- All clients call the public endpoints exposed by the TCC Priority or Status Service.
-- When running locally (without Kubernetes), ensure the service they depend on is running in Quarkus dev mode.
-- If you want to test everything inside Kubernetes instead, use the Ingress and your test script (./test-endpoints.sh).
+- Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
 
 ### Connecting Clients to Kubernetes Cluster
 
 If your services are deployed in Kubernetes, you have two options to connect clients:
 
-**Option 1: Port-Forward (Recommended for local testing)**
+**Option 1: Port-Forward (Alternative for local testing)**
 
 ```bash
 # In a separate terminal, forward the Priority Service port
 kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8080:80
 
-# Then run the client normally (it will use http://localhost:8080)
+# Then run the client with tcc.test (required even with port-forward)
 cd task4/clients/emergency-vehicle-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient"
+mvn quarkus:dev -Dbase.url=http://tcc.test
 ```
 
-**Option 2: Use Ingress Hostname (Recommended for production-like testing)**
+**Note:**
+
+- **You still need `-Dbase.url=http://tcc.test` even with port-forward!** The port-forward forwards to the Ingress, which requires the `tcc.test` hostname.
+- With port-forwarding, you can only access one service at a time. If you need both Priority and Status services, you'll need to set up port-forwarding for both services in separate terminals, or use the Ingress option below.
+
+**Option 2: Use Ingress Hostname (Recommended - Production-like setup)**
+
+**Important:** You must pass `-Dbase.url=http://tcc.test` when running the client, otherwise it will use the default `http://localhost:8080` and fail with a 404 error.
 
 First, add `tcc.test` to your `/etc/hosts` file:
 
@@ -319,8 +261,10 @@ Finally, run the client with the Ingress hostname:
 
 ```bash
 cd task4/clients/emergency-vehicle-client
-mvn compile exec:java -Dexec.mainClass="de.tub.aot.client.EmergencyVehicleClient" -Dbase.url=http://tcc.test
+mvn quarkus:dev -Dbase.url=http://tcc.test
 ```
+
+**Note:** The `-Dbase.url=http://tcc.test` parameter is **required** to override the default `http://localhost:8080` from `application.properties`. Without it, the client will try to connect to `localhost:8080` and fail.
 
 **Advantages of Ingress:**
 
