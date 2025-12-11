@@ -5,9 +5,10 @@ import de.tub.aot.client.api.PriorityResponse;
 import de.tub.aot.client.api.RequestStatus;
 import de.tub.aot.client.api.TccApiClient;
 import de.tub.aot.client.api.TrafficStatus;
-import org.eclipse.microprofile.rest.client.RestClientBuilder;
-
-import java.net.URI;
+import io.quarkus.runtime.QuarkusApplication;
+import io.quarkus.runtime.annotations.QuarkusMain;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 /**
  * Simple demo client for a generic Other Vehicle.
@@ -22,34 +23,24 @@ import java.net.URI;
  * but you can override it with:
  * -Dbase.url=http://some-host:some-port
  */
-public class OtherVehicleClient {
-
-    private static final String BASE_URL = System.getProperty("base.url", "http://localhost:8080");
+@QuarkusMain
+public class OtherVehicleClient implements QuarkusApplication {
 
     private static final String DUMMY_REQUEST_ID = "123e4567-e89b-12d3-a456-426614174000";
 
-    private final TccApiClient apiClient;
+    @Inject
+    @RestClient
+    TccApiClient apiClient;
 
-    public OtherVehicleClient() {
-        // Build REST client with base URL
-        this.apiClient = RestClientBuilder.newBuilder()
-                .baseUri(URI.create(BASE_URL))
-                .build(TccApiClient.class);
-    }
-
-    public static void main(String[] args) {
-        OtherVehicleClient client = new OtherVehicleClient();
-        try {
-            client.runDemo();
-        } catch (Exception e) {
-            System.err.println("Error while calling services:");
-            e.printStackTrace();
-        }
+    @Override
+    public int run(String... args) throws Exception {
+        runDemo();
+        return 0;
     }
 
     private void runDemo() throws Exception {
         System.out.println("=== Other Vehicle Client ===");
-        System.out.println("Using base URL: " + BASE_URL);
+        System.out.println("Using Quarkus REST Client");
 
         callTrafficStatusEndpoint();
         callPriorityRequestEndpoint();
