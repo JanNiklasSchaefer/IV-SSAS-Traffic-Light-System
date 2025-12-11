@@ -10,23 +10,22 @@ import java.time.Duration;
  * Simple demo client for a generic Other Vehicle.
  *
  * According to your REST API spec, clients only call the EXTERNAL endpoints:
- *   - GET  /api/status/traffic
- *   - POST /api/priority/requests
- *   - GET  /api/priority/requests/{requestId}
+ * - GET /api/status/traffic
+ * - POST /api/priority/requests
+ * - GET /api/priority/requests/{requestId}
  *
  * This client:
- *   1. Requests the current traffic status for a vehicle
- *   2. Sends a priority request for an "other" vehicle
- *   3. Fetches the status of a (dummy) priority request
+ * 1. Requests the current traffic status for a vehicle
+ * 2. Sends a priority request for an "other" vehicle
+ * 3. Fetches the status of a (dummy) priority request
  *
  * Default base URL is http://localhost:8080 (for Quarkus dev mode),
  * but you can override it with:
- *   -Dbase.url=http://some-host:some-port
+ * -Dbase.url=http://some-host:some-port
  */
 public class OtherVehicleClient {
 
-    private static final String BASE_URL =
-            System.getProperty("base.url", "http://localhost:8080");
+    private static final String BASE_URL = System.getProperty("base.url", "http://localhost:8080");
 
     private static final String DUMMY_REQUEST_ID = "123e4567-e89b-12d3-a456-426614174000";
 
@@ -35,6 +34,7 @@ public class OtherVehicleClient {
     public OtherVehicleClient() {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
+                .version(HttpClient.Version.HTTP_1_1) // Force HTTP/1.1 to avoid Ingress issues
                 .build();
     }
 
@@ -74,8 +74,7 @@ public class OtherVehicleClient {
 
         System.out.println("Sending request...");
 
-        HttpResponse<String> response =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         System.out.println("Status: " + response.statusCode());
     }
@@ -103,8 +102,7 @@ public class OtherVehicleClient {
 
         System.out.println("Sending request...");
 
-        HttpResponse<String> response =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         System.out.println("Status: " + response.statusCode());
     }
@@ -126,8 +124,7 @@ public class OtherVehicleClient {
 
         System.out.println("Sending request...");
 
-        HttpResponse<String> response =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         System.out.println("Status: " + response.statusCode());
     }

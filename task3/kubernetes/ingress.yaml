@@ -4,7 +4,9 @@ metadata:
   name: gruppe8-tcc-ingress
   namespace: gruppe8-tcc
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    # No rewrite needed - services already expect /api/priority and /api/status paths
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
 spec:
   ingressClassName: nginx
   rules:
