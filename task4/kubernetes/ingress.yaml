@@ -7,6 +7,10 @@ metadata:
     # No rewrite needed - services already expect /api/priority and /api/status paths
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    # Ensure proper HTTP/1.1 handling and prevent chunked encoding issues
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    # Disable proxy buffering to prevent chunked encoding issues with some clients
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
 spec:
   ingressClassName: nginx
   rules:
