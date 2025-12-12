@@ -11,8 +11,22 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
     # Disable proxy buffering to prevent chunked encoding issues with some clients
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # TLS Configuration (Task 4)
+    # Note: Certificate is managed manually via task4-gruppe8-tcc-ingress-cert
+    # Do NOT use cert-manager.io/issuer annotation to avoid duplicate certificates
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # mTLS Configuration: Ingress uses client certificate to authenticate to Priority Service
+    # Note: Reusing Emergency Vehicle Client certificate (both are client auth certificates)
+    # Note: proxy-ssl-verify is off because certificates are trusted within the cluster
+    nginx.ingress.kubernetes.io/proxy-ssl-secret: "gruppe8-tcc/task4-gruppe8-emergency-vehicle-client-tls"
+    nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - tcc.test
+      secretName: task4-gruppe8-tcc-ingress-tls
   rules:
     - host: tcc.test
       http:
@@ -23,11 +37,11 @@ spec:
               service:
                 name: gruppe8-tcc-priority-service
                 port:
-                  number: 80
+                  number: 8443
           - path: /api/status
             pathType: Prefix
             backend:
               service:
                 name: gruppe8-tcc-status-service
                 port:
-                  number: 80
+                  number: 8443

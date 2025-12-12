@@ -1,0 +1,35 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: task4-gruppe8-tcc-priority-service-cert
+  namespace: gruppe8-tcc
+spec:
+  isCA: false
+  commonName: tcc-priority-service.gruppe8-tcc.svc.cluster.local
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 4
+  secretName: task4-gruppe8-tcc-priority-service-tls
+  usages:
+    - server auth
+    - client auth # Required for mTLS
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+    - tcc-priority-service
+    - tcc-priority-service.gruppe8-tcc
+    - tcc-priority-service.gruppe8-tcc.svc
+    - tcc-priority-service.gruppe8-tcc.svc.cluster.local
+    - gruppe8-tcc-priority-service
+    - gruppe8-tcc-priority-service.gruppe8-tcc
+    - gruppe8-tcc-priority-service.gruppe8-tcc.svc
+    - gruppe8-tcc-priority-service.gruppe8-tcc.svc.cluster.local
+    - tcc.test # For Ingress
+  issuerRef:
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io
