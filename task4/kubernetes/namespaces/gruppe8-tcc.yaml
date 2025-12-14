@@ -5,7 +5,7 @@ metadata:
   labels:
     name: gruppe8-tcc
     trust-ca: iv-ssas
-
+    linkerd.io/inject: enabled
 ---
 apiVersion: v1
 kind: Namespace
@@ -14,7 +14,7 @@ metadata:
   labels:
     name: gruppe8-traffic-light-devices
     trust-ca: iv-ssas
-
+    linkerd.io/inject: enabled
 ---
 apiVersion: v1
 kind: Namespace
@@ -23,3 +23,4 @@ metadata:
   labels:
     name: gruppe8-shared-services
     trust-ca: iv-ssas
+    linkerd.io/inject: enabled
