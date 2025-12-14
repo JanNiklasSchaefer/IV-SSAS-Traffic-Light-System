@@ -145,6 +145,57 @@ This will:
 - `kubectl` configured to connect to your cluster
 - Docker registry accessible from the cluster (or use local registry with kind)
 
+### Install Linkerd
+
+The initial setup of Linkerd is needed to setup the Service Mesh and ensure mTLS between Services inside the cluster.
+
+```
+# Setting LINKERD2_VERSION sets the version to install.
+# If unset, you'll get the latest available edge version.
+export LINKERD2_VERSION=edge-25.10.7
+curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install-edge | sh
+
+# Add it to your path 
+export PATH=$HOME/.linkerd2/bin:$PATH
+
+# Install Gateway API on the Kubernetes Cluster:
+
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml
+
+# Validate Kubernetes Cluster
+
+linkerd check --pre
+
+#Install Linkered onto cluster
+
+linkerd install --crds | kubectl apply -f -
+
+#Follow it with: 
+
+linkerd install | kubectl apply -f -
+```
+
+After installing linkered to the cluster, it might take a few minutes for the pods to properly start. You can watch it with:
+
+```
+watch kubectl -n linkerd get pods
+```
+
+Once all Pods are ready you can check the installation with:
+
+```
+linkerd check
+```
+
+Depending on the version there might be some warnings, as long as it says "up-to-date" this can be ignored.
+Example Warning:
+
+```
+‼ control plane is up-to-date
+    is running version 25.10.7 but the latest edge version is 25.12.2
+    see https://linkerd.io/2/checks/#l5d-version-control for hints
+```
+
 #### Generate Kubernetes Manifests
 
 Kubernetes manifests are automatically generated during the build process. They can be found in:
@@ -167,7 +218,6 @@ mvn clean package -Dquarkus.kubernetes.deploy=false
 Services are organized into multiple namespaces for better separation:
 
 - **`gruppe8-tcc`**: TCC core services (Priority, State Controller, Status, Audit)
-- **`gruppe8-auth-services`**: Auth Service
 - **`gruppe8-traffic-light-devices`**: Traffic Light Device Service
 - **`gruppe8-shared-services`**: Shared services (Time Service, Location Validator)
 - **`ingress-nginx`**: Ingress controller (managed by cluster admin)
@@ -249,6 +299,66 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 - Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
 
 **Note:** Service-to-service communication currently uses HTTP. TLS for service-to-service communication will be handled by Kubernetes/Service Mesh (e.g., Istio, Linkerd) in future tasks, not at the application level.
+
+### Configuring the Service Mesh
+
+## Deploying the Service Mesh
+
+```
+# Deploy Service Mesh to keycloak namespace
+
+kubectl get -n keycloak deploy -o yaml \
+  | linkerd inject - \
+  | kubectl apply -f -
+
+# Deploy service mesh to gruppe8-tcc namespace
+
+kubectl get -n gruppe8-tcc deploy -o yaml \
+  | linkerd inject - \
+  | kubectl apply -f -
+
+# Deploy service mesh to gruppe8-traffic-light-devices namespace
+
+kubectl get -n gruppe8-traffic-light-devices deploy -o yaml \
+  | linkerd inject - \
+  | kubectl apply -f -
+
+# Deploy service mesh to gruppe8-traffic-light-devices namespace
+
+kubectl get -n gruppe8-shared-services deploy -o yaml \
+  | linkerd inject - \
+  | kubectl apply -f -
+
+# Deploy service mesh to ingress-nginx namespace
+
+kubectl get -n ingress-nginx deploy -o yaml \
+  | linkerd inject - \
+  | kubectl apply -f -
+
+```
+
+### Validate Service Mesh 
+
+Validate that mTls is activated for all pods:
+
+```
+linkerd -n default edges deployment
+```
+
+You should see the following as part of your output:
+
+```
+SRC           DST                                    SRC_NS        DST_NS                          SECURED          
+prometheus    gruppe8-location-validator             linkerd-viz   gruppe8-shared-services         √  
+prometheus    gruppe8-time-service                   linkerd-viz   gruppe8-shared-services         √  
+prometheus    gruppe8-tcc-audit-service              linkerd-viz   gruppe8-tcc                     √  
+prometheus    gruppe8-tcc-priority-service           linkerd-viz   gruppe8-tcc                     √  
+prometheus    gruppe8-tcc-state-controller           linkerd-viz   gruppe8-tcc                     √  
+prometheus    gruppe8-tcc-status-service             linkerd-viz   gruppe8-tcc                     √  
+prometheus    gruppe8-traffic-light-device-service   linkerd-viz   gruppe8-traffic-light-devices   √  
+prometheus    ingress-nginx-controller               linkerd-viz   ingress-nginx                   √  
+prometheus    keycloak-operator                      linkerd-viz   keycloak                        √ 
+```
 
 ### Testing and Client Setup (Task 4)
 
