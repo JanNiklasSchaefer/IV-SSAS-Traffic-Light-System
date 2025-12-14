@@ -188,30 +188,22 @@ kubectl apply -f kubernetes/namespaces/gruppe8-tcc.yaml
 # Step 3: Deploy TLS certificates (Task 4)
 # Certificates are created by cert-manager using the PKI from Task 1
 
-# IMPORTANT: If the ClusterIssuer from Task 1 is not deployed, deploy it first:
+# Deploy PKI from Task 1 (if not already deployed - safe to run multiple times)
 kubectl apply -f kubernetes/pki/ca-certificate.yaml
 kubectl wait --for=condition=Ready certificate ha1-gruppe8-krzysztoflagowski-ca -n cert-manager --timeout=60s
 kubectl apply -f kubernetes/pki/ca-issuer.yaml
 kubectl wait --for=condition=Ready clusterissuer ha1-gruppe8-krzysztoflagowski-clusterissuer --timeout=60s
 
-# Check if ClusterIssuer exists (optional verification):
-kubectl get clusterissuer ha1-gruppe8-krzysztoflagowski-clusterissuer
+# Deploy Task 4 certificates
+kubectl apply -f kubernetes/certificates/
 
-# Deploy Task 4 certificates (requires ClusterIssuer from Task 1)
-kubectl apply -f kubernetes/certificates/tcc-priority-service-certificate.yaml
-kubectl apply -f kubernetes/certificates/tcc-status-service-certificate.yaml
-kubectl apply -f kubernetes/certificates/tcc-ingress-certificate.yaml
-kubectl apply -f kubernetes/certificates/emergency-vehicle-client-certificate.yaml
-
-# Wait for certificates to be issued
-# Note: Wait for specific certificates (not --all, to avoid waiting for duplicate/old certificates)
-kubectl wait --for=condition=Ready certificate task4-gruppe8-tcc-priority-service-cert -n gruppe8-tcc --timeout=60s
-kubectl wait --for=condition=Ready certificate task4-gruppe8-tcc-status-service-cert -n gruppe8-tcc --timeout=60s
-kubectl wait --for=condition=Ready certificate task4-gruppe8-tcc-ingress-cert -n gruppe8-tcc --timeout=60s
-kubectl wait --for=condition=Ready certificate task4-gruppe8-emergency-vehicle-client-cert -n gruppe8-tcc --timeout=60s
-
-# Verify all certificates are ready
-kubectl get certificate -n gruppe8-tcc
+# Wait for all certificates to be ready
+kubectl wait --for=condition=Ready certificate \
+    task4-gruppe8-tcc-priority-service-cert \
+    task4-gruppe8-tcc-status-service-cert \
+    task4-gruppe8-tcc-ingress-cert \
+    task4-gruppe8-emergency-vehicle-client-cert \
+    -n gruppe8-tcc --timeout=120s
 
 # Step 4: Deploy Ingress (before building to avoid conflicts)
 kubectl apply -f kubernetes/ingress.yaml
@@ -219,8 +211,8 @@ kubectl apply -f kubernetes/ingress.yaml
 # Step 5: Build and deploy all services
 mvn clean package -Dquarkus.kubernetes.deploy=true
 
-# Step 6: Test endpoints (can also be used locally without deployment)
-./test-endpoints.sh
+# Step 6: Verify deployment (optional)
+# See "Verify Deployment" section below for commands
 ```
 
 **Ingress Configuration**
@@ -232,7 +224,7 @@ The shared Ingress exposes:
 
 **Note:** All communication is now encrypted with TLS. HTTP requests are automatically redirected to HTTPS.
 
-**Verify Deployment and Test**
+**Verify Deployment**
 
 ```bash
 # Check all pods across all namespaces
@@ -246,9 +238,6 @@ kubectl get services -A | grep gruppe8
 
 # Check ingress
 kubectl get ingress -n gruppe8-tcc
-
-# Run test script
-./test-endpoints.sh
 ```
 
 **Service-to-Service Communication**
@@ -261,13 +250,24 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 
 **Note:** Service-to-service communication currently uses HTTP. TLS for service-to-service communication will be handled by Kubernetes/Service Mesh (e.g., Istio, Linkerd) in future tasks, not at the application level.
 
-### Using Clients with TLS (Task 4)
+### Testing and Client Setup (Task 4)
+
+#### Test Service Endpoints
+
+After deployment, test the services using the test script:
+
+```bash
+cd task4
+./test-endpoints.sh
+```
+
+This script tests all service endpoints from within the cluster.
 
 #### Setup Client Certificates {#setup-client-certificates}
 
 **IMPORTANT: Do this BEFORE running clients locally!**
 
-Before running clients locally, extract and configure certificates:
+To run clients locally, extract and configure certificates:
 
 ```bash
 cd task4
@@ -306,6 +306,21 @@ These scripts are useful if you only need specific certificates or want to custo
 
 #### Run Clients
 
+**Note:** Make sure you've completed [Setup Client Certificates](#setup-client-certificates) first and added `tcc.test` to your `/etc/hosts` file (see below).
+
+**Setup `/etc/hosts`:**
+
+```bash
+# On macOS/Linux, edit /etc/hosts (requires sudo)
+sudo nano /etc/hosts
+# Add this line:
+127.0.0.1 tcc.test
+```
+
+**Note:** On Windows, edit `C:\Windows\System32\drivers\etc\hosts` as Administrator.
+
+**Run clients:**
+
 **Standard TLS clients** (Mayor, Other Vehicle, Pedestrian):
 
 ```bash
@@ -320,73 +335,22 @@ cd task4/clients/emergency-vehicle-client
 mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
-**Note:** The `-Dbase.url=https://tcc.test` parameter is **required** to override the default `https://localhost:8443` from `application.properties`. Ensure `tcc.test` is in your `/etc/hosts` file pointing to `127.0.0.1`.
+**Note:** The `-Dbase.url=https://tcc.test` parameter is **required** to override the default `https://localhost:8443` from `application.properties`.
 
-### Connecting Clients to Kubernetes Cluster
+**Alternative: Port-Forward (if Ingress is not available)**
 
-**Note:** This section provides additional details on connection options. Make sure you've completed [Setup Client Certificates](#setup-client-certificates) first!
-
-If your services are deployed in Kubernetes, you have two options to connect clients:
-
-**Option 1: Port-Forward (Alternative for local testing)**
+If you prefer port-forwarding instead of Ingress:
 
 ```bash
 # In a separate terminal, forward the Priority Service port
 kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8080:80
 
-# Then run the client with tcc.test (required even with port-forward)
+# Then run the client (still requires tcc.test hostname)
 cd task4/clients/emergency-vehicle-client
 mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
-**Note:**
-
-- **You still need `-Dbase.url=https://tcc.test` even with port-forward!** The port-forward forwards to the Ingress, which requires the `tcc.test` hostname and HTTPS.
-- With port-forwarding, you can only access one service at a time. If you need both Priority and Status services, you'll need to set up port-forwarding for both services in separate terminals, or use the Ingress option below.
-
-**Option 2: Use Ingress Hostname (Recommended - Production-like setup)**
-
-**Important:** You must pass `-Dbase.url=https://tcc.test` when running the client, otherwise it will use the default `https://localhost:8443` and fail.
-
-First, add `tcc.test` to your `/etc/hosts` file:
-
-```bash
-# On macOS/Linux, edit /etc/hosts (requires sudo)
-sudo nano /etc/hosts
-# or
-sudo vi /etc/hosts
-
-# Add this line:
-127.0.0.1 tcc.test
-```
-
-**Note:** On Windows, edit `C:\Windows\System32\drivers\etc\hosts` as Administrator.
-
-Then verify the Ingress is working:
-
-```bash
-# Check if Ingress is configured
-kubectl get ingress -n gruppe8-tcc
-
-# Test the Ingress endpoint (HTTPS)
-curl -k https://tcc.test/api/priority/requests -X POST -H "Content-Type: application/json" -d '{"vehicleType":"emergency"}'
-```
-
-Finally, run the client with the Ingress hostname:
-
-```bash
-cd task4/clients/emergency-vehicle-client
-mvn quarkus:dev -Dbase.url=https://tcc.test
-```
-
-**Note:** The `-Dbase.url=https://tcc.test` parameter is **required** to override the default `https://localhost:8443` from `application.properties`. Without it, the client will try to connect to `localhost:8443` and fail.
-
-**Advantages of Ingress:**
-
-- Both Priority and Status services accessible via single hostname
-- Path-based routing (`/api/priority/*` and `/api/status/*`)
-- Production-like setup
-- TLS encryption enabled
+**Note:** Port-forwarding only allows access to one service at a time. Ingress (recommended) allows access to all services via a single hostname.
 
 ## TLS Configuration (Task 4)
 
