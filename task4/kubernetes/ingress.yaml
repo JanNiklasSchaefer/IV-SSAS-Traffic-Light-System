@@ -37,11 +37,11 @@ spec:
               service:
                 name: gruppe8-tcc-priority-service
                 port:
-                  number: 8443
+                  name: https
           - path: /api/status
             pathType: Prefix
             backend:
               service:
                 name: gruppe8-tcc-status-service
                 port:
-                  number: 8443
+                  name: https

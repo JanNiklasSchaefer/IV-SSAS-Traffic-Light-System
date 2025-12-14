@@ -1,5 +1,16 @@
 ## Task 4 – Microservices, TLS, and Deployment Guide
 
+### Overview
+
+Task 4 focuses on deploying microservices to Kubernetes with TLS encryption for client-to-service communication. The implementation includes:
+
+- **TLS encryption** for all client-facing services (Priority Service, Status Service)
+- **Mutual TLS (mTLS)** between Emergency Vehicle Client and Priority Service for enhanced security
+- **Kubernetes deployment** with automated certificate management using cert-manager
+- **Ingress configuration** for external access to services via HTTPS
+
+Service-to-service communication within the cluster uses HTTP and will be secured by Kubernetes/Service Mesh in future tasks.
+
 ### Repository Layout
 
 ```
@@ -24,6 +35,9 @@ task4/
 │   │   ├── tcc-status-service-certificate.yaml
 │   │   ├── tcc-ingress-certificate.yaml
 │   │   └── emergency-vehicle-client-certificate.yaml
+│   ├── pki/                 # PKI from Task 1 (if not already deployed)
+│   │   ├── ca-certificate.yaml
+│   │   └── ca-issuer.yaml
 │   ├── test-pod.yaml        # Test pod for cluster-internal testing
 │   └── namespaces/          # Namespace definitions
 │       └── gruppe8-tcc.yaml
@@ -83,7 +97,7 @@ Additionally you need:
 
 - Docker Desktop or Docker Engine running
 - Local Docker registry (optional, for pushing images)
-- **PKI from Task 1**: The Intermediate CA (`ha1-gruppe8-krzysztoflagowski-clusterissuer`) must be deployed in the cluster
+- **PKI from Task 1**: The Intermediate CA (`ha1-gruppe8-krzysztoflagowski-clusterissuer`) must be deployed in the cluster. If not already deployed, see "Deploy to Kubernetes" → Step 3 for instructions.
 - **cert-manager** and **trust-manager** must be installed in the cluster
 
 ### Building the Project
@@ -173,6 +187,17 @@ kubectl apply -f kubernetes/namespaces/gruppe8-tcc.yaml
 
 # Step 3: Deploy TLS certificates (Task 4)
 # Certificates are created by cert-manager using the PKI from Task 1
+
+# IMPORTANT: If the ClusterIssuer from Task 1 is not deployed, deploy it first:
+kubectl apply -f kubernetes/pki/ca-certificate.yaml
+kubectl wait --for=condition=Ready certificate ha1-gruppe8-krzysztoflagowski-ca -n cert-manager --timeout=60s
+kubectl apply -f kubernetes/pki/ca-issuer.yaml
+kubectl wait --for=condition=Ready clusterissuer ha1-gruppe8-krzysztoflagowski-clusterissuer --timeout=60s
+
+# Check if ClusterIssuer exists (optional verification):
+kubectl get clusterissuer ha1-gruppe8-krzysztoflagowski-clusterissuer
+
+# Deploy Task 4 certificates (requires ClusterIssuer from Task 1)
 kubectl apply -f kubernetes/certificates/tcc-priority-service-certificate.yaml
 kubectl apply -f kubernetes/certificates/tcc-status-service-certificate.yaml
 kubectl apply -f kubernetes/certificates/tcc-ingress-certificate.yaml
@@ -236,7 +261,70 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 
 **Note:** Service-to-service communication currently uses HTTP. TLS for service-to-service communication will be handled by Kubernetes/Service Mesh (e.g., Istio, Linkerd) in future tasks, not at the application level.
 
+### Using Clients with TLS (Task 4)
+
+#### Setup Client Certificates {#setup-client-certificates}
+
+**IMPORTANT: Do this BEFORE running clients locally!**
+
+Before running clients locally, extract and configure certificates:
+
+```bash
+cd task4
+
+# Extract CA certificate and convert to PKCS12 for all clients
+./setup-certs-now.sh
+```
+
+This script:
+
+- Extracts the CA certificate from Kubernetes
+- Converts it to PKCS12 format
+- Copies certificates to all client resources directories
+- Extracts client certificate for Emergency Vehicle Client (mTLS)
+
+**Alternative: Manual extraction using individual scripts**
+
+If you need more control or want to extract certificates manually, you can use the individual scripts in the `scripts/` directory. **Note:** These scripts only extract certificates to the `certs/` directory - you'll need to manually copy them to client directories if needed.
+
+```bash
+# Extract CA certificate only (writes to certs/ca.crt)
+./scripts/extract-ca-cert.sh
+
+# Convert CA to PKCS12 (writes to certs/ca.p12)
+./scripts/convert-ca-to-pkcs12.sh
+
+# Extract client certificate for mTLS only (writes to certs/client.p12)
+./scripts/extract-client-cert.sh
+
+# Then manually copy to clients if needed:
+# cp certs/ca.p12 clients/emergency-vehicle-client/src/main/resources/certs/
+# cp certs/client.p12 clients/emergency-vehicle-client/src/main/resources/certs/
+```
+
+These scripts are useful if you only need specific certificates or want to customize the extraction process.
+
+#### Run Clients
+
+**Standard TLS clients** (Mayor, Other Vehicle, Pedestrian):
+
+```bash
+cd task4/clients/mayor-vehicle-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
+```
+
+**mTLS client** (Emergency Vehicle):
+
+```bash
+cd task4/clients/emergency-vehicle-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
+```
+
+**Note:** The `-Dbase.url=https://tcc.test` parameter is **required** to override the default `https://localhost:8443` from `application.properties`. Ensure `tcc.test` is in your `/etc/hosts` file pointing to `127.0.0.1`.
+
 ### Connecting Clients to Kubernetes Cluster
+
+**Note:** This section provides additional details on connection options. Make sure you've completed [Setup Client Certificates](#setup-client-certificates) first!
 
 If your services are deployed in Kubernetes, you have two options to connect clients:
 
@@ -353,44 +441,6 @@ mvn clean package -Dquarkus.kubernetes.deploy=true
 - `task4-gruppe8-tcc-status-service-cert`: Server certificate for Status Service
 - `task4-gruppe8-tcc-ingress-cert`: Server certificate for Ingress (client-facing)
 - `task4-gruppe8-emergency-vehicle-client-cert`: Client certificate for Emergency Vehicle Client (mTLS). Also reused by Ingress to authenticate to Priority Service.
-
-### Using Clients with TLS
-
-#### Setup Client Certificates
-
-Before running clients locally, extract and configure certificates:
-
-```bash
-cd task4
-
-# Extract CA certificate and convert to PKCS12 for all clients
-./setup-certs-now.sh
-```
-
-This script:
-
-- Extracts the CA certificate from Kubernetes
-- Converts it to PKCS12 format
-- Copies certificates to all client resources directories
-- Extracts client certificate for Emergency Vehicle Client (mTLS)
-
-#### Run Clients
-
-**Standard TLS clients** (Mayor, Other Vehicle, Pedestrian):
-
-```bash
-cd task4/clients/mayor-vehicle-client
-mvn quarkus:dev -Dbase.url=https://tcc.test
-```
-
-**mTLS client** (Emergency Vehicle):
-
-```bash
-cd task4/clients/emergency-vehicle-client
-mvn quarkus:dev -Dbase.url=https://tcc.test
-```
-
-**Note:** Ensure `tcc.test` is in your `/etc/hosts` file pointing to `127.0.0.1`.
 
 ### Technical Details
 

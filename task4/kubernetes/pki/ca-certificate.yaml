@@ -1,0 +1,22 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ha1-gruppe8-krzysztoflagowski-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: Krzysztof Lagowski CA
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 1
+  secretName: ha1-gruppe8-krzysztoflagowski-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: default-example-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
