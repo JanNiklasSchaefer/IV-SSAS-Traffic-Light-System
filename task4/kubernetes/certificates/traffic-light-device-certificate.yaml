@@ -1,0 +1,36 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: task4-gruppe8-traffic-light-devices-cert
+  namespace: gruppe8-traffic-light-devices
+spec:
+  isCA: false
+  commonName: traffic-light-devices.svc.cluster.local
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 4
+  secretName: task4-gruppe8-traffic-light-devices-tls
+  usages:
+    - server auth
+    - client auth # Required for mTLS
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+  # Why all those DNS NAMES ????
+    - traffic-light-devices
+    - traffic-light-devices.gruppe8-trafflic-light-devices
+    - traffic-light-devices.gruppe8-trafflic-light-devices.svc
+    - traffic-light-devices.gruppe8-trafflic-light-devices.svc.cluster.local
+    - gruppe8-traffic-light-devices
+    - gruppe8-traffic-light-devices.gruppe8-trafflic-light-devices
+    - gruppe8-traffic-light-devices.gruppe8-trafflic-light-devices.svc
+    - gruppe8-traffic-light-devices.gruppe8-trafflic-light-devices.svc.cluster.local
+    - tcc.test # For Ingress
+  issuerRef:
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io

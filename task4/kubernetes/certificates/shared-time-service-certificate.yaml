@@ -1,0 +1,35 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: task4-gruppe8-time-service-cert
+  namespace: gruppe8-shared-services
+spec:
+  isCA: false
+  commonName: time-service.svc.cluster.local
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 4
+  secretName: task4-gruppe8-time-service-tls
+  usages:
+    - server auth
+    - client auth # Required for mTLS
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+    - time-service
+    - time-service.gruppe8-shared-services
+    - time-service.gruppe8-shared-services.svc
+    - time-service.gruppe8-shared-services.svc.cluster.local
+    - gruppe8-time-service
+    - gruppe8-time-service.gruppe8-shared-services
+    - gruppe8-time-service.gruppe8-shared-services.svc
+    - gruppe8-time-service.gruppe8-shared-services.svc.cluster.local
+    - tcc.test # For Ingress
+  issuerRef:
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io
