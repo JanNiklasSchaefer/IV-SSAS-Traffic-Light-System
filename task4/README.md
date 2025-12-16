@@ -303,7 +303,7 @@ kubectl -n gruppe8-testing run tls-debug \
 kubectl -n gruppe8-testing exec -it tls-debug -- sh
 ```
 
-**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all endpoints can be found in /task4/TESTING.md. One example of those is:
+**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all endpoints can be found in /task4/endpoint-calls.md. One example of those is:
 
 ```
 curl -v \
@@ -335,7 +335,7 @@ curl -v http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:90
 #Check Management Endpoint for gruppe8-tcc namespace
 curl -v http://gruppe8-tcc-state-controller.gruppe8-tcc.svc.cluster.local:9000/q/health/ready
 
-#Check Management Endpoint for gruppe8-tcc namespace
+#Check Management Endpoint for gruppe8-traffic-light-devices namespace
 curl -v http://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:9000/q/health/ready
 ```
 
