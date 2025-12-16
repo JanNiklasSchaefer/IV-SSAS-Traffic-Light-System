@@ -218,7 +218,7 @@ The shared Ingress exposes:
 - `https://tcc.test/api/priority/*` → Priority Service (TLS enabled)
 - `https://tcc.test/api/status/*` → Status Service (TLS enabled)
 
-**Note:** All communication is now encrypted with TLS. HTTP requests are automatically redirected to HTTPS.
+**Note:** All communication is now encrypted with TLS.
 
 **Verify Deployment**
 
@@ -254,7 +254,7 @@ Traffic on the service port 443 is HTTPS-only, plain HTTP will be denied. The ma
 
 All communication between pods additionally requires HTTPS due to the network policies. 
 
-Overall this ensures that all communication inside the cluster is done encrypted. This prevents adversaries from listening to the network or trying to access the network via HTTP. An Adversary would need to break the authentication or get a copy of a secret in order to access data that is transmitted inside the cluster. 
+Overall this ensures that all communication inside the cluster is done encrypted. This prevents adversaries from listening to the network or trying to access the network via HTTP. An Adversary would need to break the authentication or get a copy of a secret in order to access any data inside the cluster. 
 
 #### Creating a Test Pod:
 
@@ -265,8 +265,7 @@ It is assumed directory $/task4/ is open.
 **Step 1** Create a namespace and apply the certificate:
 
 ```
-kubectl create namespace gruppe8-testing
-kubectl apply -f kubernetes/certificates/gruppe8-testing-certificate.yaml
+kubectl apply -f kubernetes/testing-pod/
 ```
 
 **Step 2** Ceate a Test Pod with the testing certificate mounted inside the testing namespace.
@@ -302,7 +301,9 @@ kubectl -n gruppe8-testing run tls-debug \
 kubectl -n gruppe8-testing exec -it tls-debug -- sh
 ```
 
-**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all endpoints can be found in /task4/endpoint-calls.md. One example of those is:
+**Note** If the pod stays open for a longer time, the pod might become completed. In that case simply delete the pod and repeat Step 2 to create a new testing pod.
+
+**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all Services can be found in /task4/endpoint-calls.md. One example of those is:
 
 ```
 curl -v \

@@ -1,4 +1,4 @@
-This is a collection of functioning curl calls if you are inside a test cluster with a proper Certificate mounted:
+This document provides at least one functioning HTTPS Rest-API call for every service. Additionally the expected output is pasted. The other endpoints for the services should work too, these are simply provided templates to make testing every service easier. 
 
 ### time-service 
 
