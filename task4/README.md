@@ -326,19 +326,6 @@ curl -v \
   "http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
 ```
 
-Additionally you can verify, that the management endpoints are not reachable from outside the pod.
-
-```
-#Check Management Endpoint for gruppe8-shared-services namespace
-curl -v https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:9000/q/health/ready
-
-#Check Management Endpoint for gruppe8-tcc namespace
-curl -v https://gruppe8-tcc-state-controller.gruppe8-tcc.svc.cluster.local:9000/q/health/ready
-
-#Check Management Endpoint for gruppe8-traffic-light-devices namespace
-curl -v https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:9000/q/health/ready
-```
-
 **Note** Most Endpoints still have hard coded answers, functionality will be added in a later task. 
 
 ## Setting up External TLS
@@ -492,7 +479,7 @@ mvn clean package -Dquarkus.kubernetes.deploy=true
 
 - **Priority Service:**
   - API port: 8443 (HTTPS with mTLS, `client-auth=required`)
-  - Management port: 9000 (HTTP, for health checks without mTLS)
+  - Management port: 9000 (HTTPS, for health checks)
   - Trust store: `/etc/certs/trust/root-certs.pem` (CA bundle from trust-manager)
 - **Status Service:**
   - API port: 8443 (HTTPS, standard TLS)
@@ -502,5 +489,4 @@ mvn clean package -Dquarkus.kubernetes.deploy=true
 
 - Client-facing: HTTPS on port 443 (certificate: `task4-gruppe8-tcc-ingress-tls`)
 - Backend to Priority Service: HTTPS with mTLS (reuses Emergency Vehicle Client certificate: `task4-gruppe8-emergency-vehicle-client-tls`)
-- Backend to Status Service: HTTPS (standard TLS)
-- SSL verification disabled for backend connections (certificates are trusted within the cluster)
+- Backend to Status Service: HTTPS
