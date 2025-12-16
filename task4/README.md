@@ -236,9 +236,9 @@ kubectl get services -A | grep gruppe8
 kubectl get ingress -n gruppe8-tcc
 ```
 
-### Testing and Client Setup (Task 4)
+# Setting up External and Internal TLS
 
-#### Internal TLS
+## Internal TLS
 
 **Service-to-Service Endpoints**
 
@@ -250,12 +250,11 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 
 All communication inside the cluster is encrypted using mTLS. For this we utilize Cert Manager certificates and the Quarkus TLS registry. This is done automatically while deploying.
 
-Traffic on the service port 443 is HTTPS-only, plain HTTP will be denied. The management endpoints, listen on IP 0.0.0.0 with Port 9000, with plain HTTP. 
+Traffic on the service port 443 is HTTPS-only, plain HTTP will be denied. The management endpoints, listen on IP 0.0.0.0 with Port 9000, with HTTPS. These Endpoints can not be accessed from outside the pod. 
 
-To prevent an adversary from abusing these HTTP management endpoints, counter measurements are taken. In particular pod-to-pod HTTP requests are blocked via the network policies. (Found in task4/kubernetes/network-policies) The endpoints are not exposed via a Service and are only reachable locally within the pod.
-While it is technically possible to secure the management interface with TLS, this was intentionally not done. In the chosen threat model, an adversary capable of accessing a pod’s network namespace or filesystem would already be able to access mounted secrets, making TLS protection of management endpoints ineffective against such an attacker. Therefore, network isolation is used as the primary protection mechanism.
+All communication between pods additionally requires HTTPS due to the network policies. 
 
-This design ensures that all meaningful inter-service communication is encrypted and authenticated.
+Overall this ensures that all communication inside the cluster is done encrypted. This prevents adversaries from listening to the network or trying to access the network via HTTP. An Adversary would need to break the authentication or get a copy of a secret in order to access data that is transmitted inside the cluster. 
 
 #### Creating a Test Pod:
 
@@ -326,33 +325,22 @@ curl -v \
   "http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
 ```
 
-Additionally you can verify, that the management endpoints are not reachable from outside the pod. Network Policies are set up per namespace, thus checking for one service in a namespace will check the property for all services in the namespace:
+Additionally you can verify, that the management endpoints are not reachable from outside the pod.
 
 ```
 #Check Management Endpoint for gruppe8-shared-services namespace
-curl -v http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:9000/q/health/ready
+curl -v https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:9000/q/health/ready
 
 #Check Management Endpoint for gruppe8-tcc namespace
-curl -v http://gruppe8-tcc-state-controller.gruppe8-tcc.svc.cluster.local:9000/q/health/ready
+curl -v https://gruppe8-tcc-state-controller.gruppe8-tcc.svc.cluster.local:9000/q/health/ready
 
 #Check Management Endpoint for gruppe8-traffic-light-devices namespace
-curl -v http://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:9000/q/health/ready
+curl -v https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:9000/q/health/ready
 ```
-
-If for all 3 cases the connection was refused, it is validated that http requests are only allowed inside the pod and not inbetween pods. 
 
 **Note** Most Endpoints still have hard coded answers, functionality will be added in a later task. 
 
-#### Test Service Endpoints
-
-After deployment, test the services using the test script:
-
-```bash
-cd task4
-./test-endpoints.sh
-```
-
-This script tests all service endpoints from within the cluster. **Note** Probably doesn't work anymore due to TLS ? 
+## Setting up External TLS
 
 #### Setup Client Certificates {#setup-client-certificates}
 
