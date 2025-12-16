@@ -1,0 +1,26 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: task4-gruppe8-tcc-ingress-cert
+  namespace: gruppe8-tcc
+spec:
+  isCA: false
+  commonName: tcc-ingress
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 4
+  secretName: task4-gruppe8-tcc-ingress-tls
+  usages:
+    - server auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+    - tcc.test
+  issuerRef:
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io

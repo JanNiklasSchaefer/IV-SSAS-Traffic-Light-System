@@ -1,0 +1,8 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+spec:
+  ca:
+    secretName: ha1-gruppe8-krzysztoflagowski-ca-secret

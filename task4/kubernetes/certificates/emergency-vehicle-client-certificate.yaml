@@ -1,0 +1,24 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: task4-gruppe8-emergency-vehicle-client-cert
+  namespace: gruppe8-tcc
+spec:
+  isCA: false
+  commonName: emergency-vehicle-client
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 4
+  secretName: task4-gruppe8-emergency-vehicle-client-tls
+  usages:
+    - client auth # For mTLS
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io

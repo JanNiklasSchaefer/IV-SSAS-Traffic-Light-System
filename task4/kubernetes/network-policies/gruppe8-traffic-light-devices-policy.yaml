@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: quarkus-management-restricted
+  namespace: gruppe8-traffic-light-devices
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/managed-by: quarkus
+  policyTypes: ["Ingress"]
+  ingress:
+  # Allow normal service-to-service TLS traffic
+  - ports:
+    - protocol: TCP
+      port: 8443

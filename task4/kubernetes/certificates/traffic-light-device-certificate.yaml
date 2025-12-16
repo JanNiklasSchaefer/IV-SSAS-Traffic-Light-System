@@ -1,0 +1,33 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: task4-gruppe8-traffic-light-devices-cert
+  namespace: gruppe8-traffic-light-devices
+spec:
+  isCA: false
+  commonName: gruppe8-traffic-light-device-service.svc.cluster.local  
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 4
+  secretName: task4-gruppe8-traffic-light-devices-tls
+  usages:
+    - server auth
+    - client auth # Required for mTLS
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+    # Short service name (works from same namespace)
+    - gruppe8-traffic-light-device-service
+
+    # Fully qualified service names (works from anywhere)
+    - gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices
+    - gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc
+    - gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local
+  issuerRef:
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io

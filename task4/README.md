@@ -1,32 +1,50 @@
-## Task 3 – Microservices, Clients, and Deployment Guide
+## Task 4 – Microservices, TLS, and Deployment Guide
 
-This folder contains the working artifacts for Task 3 of the SAM traffic-light assignment.  
-Goal: deliver runnable microservices, Kubernetes manifests, and basic clients (even with stubbed logic) that exercise the REST API defined in Task 2, plus documentation and a release package.
+### Overview
+
+Task 4 focuses on deploying microservices to Kubernetes with TLS encryption for client-to-service communication. The implementation includes:
+
+- **TLS encryption** for all client-facing services (Priority Service, Status Service)
+- **Mutual TLS (mTLS)** between Emergency Vehicle Client and Priority Service for enhanced security
+- **Kubernetes deployment** with automated certificate management using cert-manager
+- **Ingress configuration** for external access to services via HTTPS
+
+Service-to-service communication within the cluster uses HTTP and will be secured by Kubernetes/Service Mesh in future tasks.
 
 ### Repository Layout
 
 ```
-task3/
+task4/
 ├── services/                # Source & Docker context for each microservice
-│   ├── tcc-priority-service/        # → gruppe8-tcc namespace
+│   ├── tcc-priority-service/        # → gruppe8-tcc namespace (TLS + mTLS enabled)
 │   ├── tcc-state-controller/         # → gruppe8-tcc namespace
-│   ├── tcc-status-service/           # → gruppe8-tcc namespace
-│   ├── auth-service/                 # → gruppe8-auth-services namespace
+│   ├── tcc-status-service/           # → gruppe8-tcc namespace (TLS enabled)
 │   ├── tcc-audit-service/           # → gruppe8-tcc namespace
 │   ├── traffic-light-device-service/ # → gruppe8-traffic-light-devices namespace
 │   ├── time-service/                  # → gruppe8-shared-services namespace
 │   └── location-validator/           # → gruppe8-shared-services namespace
-├── clients/                 # Client apps hitting the REST endpoints
-│   ├── emergency-vehicle-client/
+├── clients/                 # Client apps hitting the REST endpoints (TLS enabled)
+│   ├── emergency-vehicle-client/     # (mTLS enabled)
 │   ├── mayor-vehicle-client/
 │   ├── other-vehicle-client/
 │   └── pedestrian-client/
 ├── kubernetes/              # Kubernetes deployment manifests
-│   ├── ingress.yaml         # Manual Ingress configuration
+│   ├── ingress.yaml         # Manual Ingress configuration (TLS enabled)
+│   ├── certificates/        # Certificate manifests for TLS
+│   │   ├── tcc-priority-service-certificate.yaml
+│   │   ├── tcc-status-service-certificate.yaml
+│   │   ├── tcc-ingress-certificate.yaml
+│   │   └── emergency-vehicle-client-certificate.yaml
+│   ├── pki/                 # PKI from Task 1 (if not already deployed)
+│   │   ├── ca-certificate.yaml
+│   │   └── ca-issuer.yaml
 │   ├── test-pod.yaml        # Test pod for cluster-internal testing
 │   └── namespaces/          # Namespace definitions
 │       └── gruppe8-tcc.yaml
-├── test-endpoints.sh        # Comprehensive endpoint testing script (AI-generated)
+├── scripts/                 # Helper scripts
+│   ├── extract-ca-cert.sh   # Extract CA certificate for local client testing
+│   └── extract-client-cert.sh # Extract client certificate for mTLS
+├── test-endpoints.sh        # Comprehensive endpoint testing script
 ├── pom.xml                  # Parent POM for all modules
 └── README.md                # You are here
 ```
@@ -55,8 +73,8 @@ Complete overview of all REST endpoints organized by service.
 |                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
 | **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                   | `{"traffic_status": {...}}`                         | Called by TCC Status Service                         |
 |                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change                    | `{"state": String}`          |                                   | `{"status_code": {...}}`                            | Called by TCC State Controller                       |
-| **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             | `{"vehicle_id": String}`     | `{"coordinates": {...}}`          | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
-| **Time Service**                 | Internal | `POST` | `/api/time/validate`        | Validate timestamp                    | `{"timestamp": "..."}`       |                                   | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
+| **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             |     | `{"vehicle_id": String, "coordinates": {...}}`          | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
+| **Time Service**                 | Internal | `POST` | `/api/time/validate`        | Validate timestamp                    |        |           `{"timestamp": "..."}`                | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
 
 **Legend:**
 
@@ -79,6 +97,8 @@ Additionally you need:
 
 - Docker Desktop or Docker Engine running
 - Local Docker registry (optional, for pushing images)
+- **PKI from Task 1**: The Intermediate CA (`ha1-gruppe8-krzysztoflagowski-clusterissuer`) must be deployed in the cluster. If not already deployed, see "Deploy to Kubernetes" → Step 3 for instructions.
+- **cert-manager** and **trust-manager** must be installed in the cluster
 
 ### Building the Project
 
@@ -89,7 +109,7 @@ The project can be built using Maven from the `task3/` directory.
 To build all services and clients and run tests:
 
 ```bash
-cd task3
+cd task4
 mvn clean install
 ```
 
@@ -104,7 +124,7 @@ This will:
 To build all services and clients including Docker container images:
 
 ```bash
-cd task3
+cd task4
 mvn clean package
 ```
 
@@ -130,13 +150,13 @@ This will:
 Kubernetes manifests are automatically generated during the build process. They can be found in:
 
 ```
-task3/services/<service-name>/target/kubernetes/kubernetes.yml
+task4/services/<service-name>/target/kubernetes/kubernetes.yml
 ```
 
 To generate manifests without deploying:
 
 ```bash
-cd task3
+cd task4
 mvn clean package -Dquarkus.kubernetes.deploy=false
 ```
 
@@ -147,7 +167,6 @@ mvn clean package -Dquarkus.kubernetes.deploy=false
 Services are organized into multiple namespaces for better separation:
 
 - **`gruppe8-tcc`**: TCC core services (Priority, State Controller, Status, Audit)
-- **`gruppe8-auth-services`**: Auth Service
 - **`gruppe8-traffic-light-devices`**: Traffic Light Device Service
 - **`gruppe8-shared-services`**: Shared services (Time Service, Location Validator)
 - **`ingress-nginx`**: Ingress controller (managed by cluster admin)
@@ -158,31 +177,56 @@ Follow these steps in order:
 
 ```bash
 # Step 1: Build and test (optional, but recommended)
-cd task3
+cd task4
 mvn clean install
 
 # Step 2: Create namespaces
 # Important: Quarkus does NOT automatically create namespaces for security reasons.
 kubectl apply -f kubernetes/namespaces/gruppe8-tcc.yaml
 
-# Step 3: Deploy Ingress (before building to avoid conflicts)
+# Step 3: Deploy TLS certificates (Task 4)
+# Certificates are created by cert-manager using the PKI from Task 1
+
+# Deploy PKI from Task 1 (if not already deployed - safe to run multiple times)
+kubectl apply -f kubernetes/pki/ca-certificate.yaml
+kubectl wait --for=condition=Ready certificate ha1-gruppe8-krzysztoflagowski-ca -n cert-manager --timeout=60s
+kubectl apply -f kubernetes/pki/ca-issuer.yaml
+kubectl wait --for=condition=Ready clusterissuer ha1-gruppe8-krzysztoflagowski-clusterissuer --timeout=60s
+
+# Deploy Task 4 certificates
+kubectl apply -f kubernetes/certificates/
+
+# Wait for all certificates to be ready
+kubectl wait --for=condition=Ready certificate \
+    task4-gruppe8-tcc-priority-service-cert \
+    task4-gruppe8-tcc-status-service-cert \
+    task4-gruppe8-tcc-ingress-cert \
+    task4-gruppe8-emergency-vehicle-client-cert \
+    -n gruppe8-tcc --timeout=120s
+
+# Step 4: Deploy Ingress (before building to avoid conflicts)
 kubectl apply -f kubernetes/ingress.yaml
 
-# Step 4: Build and deploy all services
+# Step 5: Apply Network Policies
+kubectl apply -f kubernetes/network-policies
+
+# Step 6: Build and deploy all services
 mvn clean package -Dquarkus.kubernetes.deploy=true
 
-# Step 5: Test endpoints (can also be used locally without deployment)
-./test-endpoints.sh
+# Step 7: Verify deployment (optional)
+# See "Verify Deployment" section below for commands
 ```
 
 **Ingress Configuration**
 
 The shared Ingress exposes:
 
-- `http://tcc.test/api/priority/*` → Priority Service
-- `http://tcc.test/api/status/*` → Status Service
+- `https://tcc.test/api/priority/*` → Priority Service (TLS enabled)
+- `https://tcc.test/api/status/*` → Status Service (TLS enabled)
 
-**Verify Deployment and Test**
+**Note:** All communication is now encrypted with TLS. HTTP requests are automatically redirected to HTTPS.
+
+**Verify Deployment**
 
 ```bash
 # Check all pods across all namespaces
@@ -196,12 +240,11 @@ kubectl get services -A | grep gruppe8
 
 # Check ingress
 kubectl get ingress -n gruppe8-tcc
-
-# Run test script
-./test-endpoints.sh
 ```
 
-**Service-to-Service Communication**
+### Testing and Client Setup (Task 4)
+
+**Service-to-Service Endpoints**
 
 Services communicate across namespaces using Kubernetes Service Discovery:
 
@@ -209,65 +252,267 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 - Example: `http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:80`
 - Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
 
-### Connecting Clients to Kubernetes Cluster
+Communication between Pods only works via HTTPS and on the Port 8843. 
 
-If your services are deployed in Kubernetes, you have two options to connect clients:
+All other requests are denied. 
 
-**Option 1: Port-Forward (Alternative for local testing)**
+The management requests of each pod listen on IP 0.0.0.0 with Port 9000. 
 
-```bash
-# In a separate terminal, forward the Priority Service port
-kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8080:80
+HTTP Requests are only allowed inside the pod, due to security implications. TODO: (Explanation further down below)
 
-# Then run the client with tcc.test (required even with port-forward)
-cd task4/clients/emergency-vehicle-client
-mvn quarkus:dev -Dbase.url=http://tcc.test
+#### Creating a Test Pod:
+
+In order to test internal TLS we must call the Services from inside the cluster. A testing namespace and certificate must be created and then a testing pod can be used to test all the endpoints. 
+
+It is assumed all calls are made inside the directory $/task4/. First create a namespace and apply the certificate:
+
+```
+kubectl create namespace gruppe8-testing
+kubectl apply -f kubernetes/certificates/gruppe8-testing-certificate.yaml
 ```
 
-**Note:**
+Then create a Test Pod with the testing certificate mounted inside the testing namespace and open a shell:
 
-- **You still need `-Dbase.url=http://tcc.test` even with port-forward!** The port-forward forwards to the Ingress, which requires the `tcc.test` hostname.
-- With port-forwarding, you can only access one service at a time. If you need both Priority and Status services, you'll need to set up port-forwarding for both services in separate terminals, or use the Ingress option below.
+```
+# Create Testing Pod with name tls-debug
+kubectl -n gruppe8-testing run tls-debug \
+  --image=curlimages/curl:8.5.0 \
+  --restart=Never \
+  --overrides='
+{
+  "spec": {
+    "containers": [{
+      "name": "curl",
+      "image": "curlimages/curl:8.5.0",
+      "command": ["sh","-c","sleep 3600"],
+      "stdin": true,
+      "tty": true,
+      "volumeMounts": [
+        {"name":"certs","mountPath":"/certs","readOnly":true}
+      ]
+    }],
+    "volumes": [
+      {"name":"certs","secret":{"secretName":"gruppe8-task4-testing-cert-tls"}}
+    ]
+  }
+}'
 
-**Option 2: Use Ingress Hostname (Recommended - Production-like setup)**
 
-**Important:** You must pass `-Dbase.url=http://tcc.test` when running the client, otherwise it will use the default `http://localhost:8080` and fail with a 404 error.
+# Open Shell in Test Pod
+kubectl -n gruppe8-testing exec -it tls-debug -- sh
+```
 
-First, add `tcc.test` to your `/etc/hosts` file:
+Inside this shell the Pods of the cluster can now be called internally.
+
+Here an example call for the time-service endpoint /api/time/validate with Body {"timestamp":1} is sent. 
+
+```
+curl -v \
+  --cacert /certs/ca.crt \
+  --cert /certs/tls.crt \
+  --key /certs/tls.key \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"timestamp":1}' \
+  "https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
+```
+
+The same endpoint with HTTP will not work, showing that TLS is required:
+
+```
+curl -v \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"timestamp":1}' \
+  "http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
+```
+
+Additionally you can verify, that the management endpoints are not reachable from outside the pod. Network Policies are set up per namespace, thus checking for one service in a namespace will check the property for all services in the namespace.:
+
+```
+#Check Management Endpoint for gruppe8-shared-services namespace
+curl -v http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:9000/q/health/ready
+
+#Check Management Endpoint for gruppe8-tcc namespace
+curl -v http://gruppe8-tcc-state-controller.gruppe8-tcc.svc.cluster.local:9000/q/health/ready
+
+#Check Management Endpoint for gruppe8-tcc namespace
+curl -v http://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:9000/q/health/ready
+```
+
+If for all 3 cases the connection was refused, it is validated that http requests are only allowed inside the pod and not inbetween pods. 
+
+**Note** Most Endpoints still have hard coded answers, functionality will be added in a later task. 
+
+#### Test Service Endpoints
+
+After deployment, test the services using the test script:
+
+```bash
+cd task4
+./test-endpoints.sh
+```
+
+This script tests all service endpoints from within the cluster. **Note** Probably doesn't work anymore due to TLS ? 
+
+#### Setup Client Certificates {#setup-client-certificates}
+
+**IMPORTANT: Do this BEFORE running clients locally!**
+
+To run clients locally, extract and configure certificates:
+
+```bash
+cd task4
+
+# Extract CA certificate and convert to PKCS12 for all clients
+./setup-certs-now.sh
+```
+
+This script:
+
+- Extracts the CA certificate from Kubernetes
+- Converts it to PKCS12 format
+- Copies certificates to all client resources directories
+- Extracts client certificate for Emergency Vehicle Client (mTLS)
+
+**Alternative: Manual extraction using individual scripts**
+
+If you need more control or want to extract certificates manually, you can use the individual scripts in the `scripts/` directory. **Note:** These scripts only extract certificates to the `certs/` directory - you'll need to manually copy them to client directories if needed.
+
+```bash
+# Extract CA certificate only (writes to certs/ca.crt)
+./scripts/extract-ca-cert.sh
+
+# Convert CA to PKCS12 (writes to certs/ca.p12)
+./scripts/convert-ca-to-pkcs12.sh
+
+# Extract client certificate for mTLS only (writes to certs/client.p12)
+./scripts/extract-client-cert.sh
+
+# Then manually copy to clients if needed:
+# cp certs/ca.p12 clients/emergency-vehicle-client/src/main/resources/certs/
+# cp certs/client.p12 clients/emergency-vehicle-client/src/main/resources/certs/
+```
+
+These scripts are useful if you only need specific certificates or want to customize the extraction process.
+
+#### Run Clients
+
+**Note:** Make sure you've completed [Setup Client Certificates](#setup-client-certificates) first and added `tcc.test` to your `/etc/hosts` file (see below).
+
+**Setup `/etc/hosts`:**
 
 ```bash
 # On macOS/Linux, edit /etc/hosts (requires sudo)
 sudo nano /etc/hosts
-# or
-sudo vi /etc/hosts
-
 # Add this line:
 127.0.0.1 tcc.test
 ```
 
 **Note:** On Windows, edit `C:\Windows\System32\drivers\etc\hosts` as Administrator.
 
-Then verify the Ingress is working:
+**Run clients:**
+
+**Standard TLS clients** (Mayor, Other Vehicle, Pedestrian):
 
 ```bash
-# Check if Ingress is configured
-kubectl get ingress -n gruppe8-tcc
-
-# Test the Ingress endpoint
-curl http://tcc.test/api/priority/requests -X POST -H "Content-Type: application/json" -d '{"vehicleType":"emergency"}'
+cd task4/clients/mayor-vehicle-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
-Finally, run the client with the Ingress hostname:
+**mTLS client** (Emergency Vehicle):
 
 ```bash
 cd task4/clients/emergency-vehicle-client
-mvn quarkus:dev -Dbase.url=http://tcc.test
+mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
-**Note:** The `-Dbase.url=http://tcc.test` parameter is **required** to override the default `http://localhost:8080` from `application.properties`. Without it, the client will try to connect to `localhost:8080` and fail.
+**Note:** The `-Dbase.url=https://tcc.test` parameter is **required** to override the default `https://localhost:8443` from `application.properties`.
 
-**Advantages of Ingress:**
+**Alternative: Port-Forward (if Ingress is not available)**
 
-- Both Priority and Status services accessible via single hostname
-- Path-based routing (`/api/priority/*` and `/api/status/*`)
-- Production-like setup
+If you prefer port-forwarding instead of Ingress:
+
+```bash
+# In a separate terminal, forward the Priority Service port
+kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8080:80
+
+# Then run the client (still requires tcc.test hostname)
+cd task4/clients/emergency-vehicle-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
+```
+
+**Note:** Port-forwarding only allows access to one service at a time. Ingress (recommended) allows access to all services via a single hostname.
+
+## TLS Configuration (Task 4)
+
+All client-to-service communication is encrypted using TLS. The **Emergency Vehicle Client** uses **mutual TLS (mTLS)** when communicating with the **Priority Service**.
+
+### Architecture Decisions
+
+**TLS for Client-to-Service Communication:**
+
+- **Decision:** TLS is enabled for all microservices that are accessed by clients (Priority Service, Status Service). Service-to-service communication within the cluster uses plain HTTP and will be secured by Kubernetes/Service Mesh in future tasks.
+- **Rationale:** Ensures end-to-end encryption from clients through the Ingress to the services. Service-to-service TLS will be handled at the infrastructure level (e.g., Istio, Linkerd) rather than at the application level.
+- **Implementation:** Services use TLS certificates issued by cert-manager, mounted as Kubernetes secrets, for client-facing endpoints only.
+
+**Mutual TLS (mTLS):**
+
+- **Decision:** mTLS is implemented between the Emergency Vehicle Client and the Priority Service.
+- **Rationale:** Emergency vehicles require higher security due to their critical nature. mTLS provides mutual authentication, ensuring both client and server verify each other's identity.
+- **Implementation:**
+  - Priority Service requires client certificates (`quarkus.http.ssl.client-auth=required`)
+  - Emergency Vehicle Client presents its client certificate during TLS handshake
+  - Ingress Controller reuses the Emergency Vehicle Client certificate when forwarding requests to the Priority Service (both are client auth certificates)
+
+**Health Checks:**
+
+- **Decision:** Health checks run on a separate management port (9000) without mTLS.
+- **Rationale:** Kubernetes health checks cannot provide client certificates. Using a separate HTTP port for health checks allows the service to remain healthy while enforcing mTLS on the main API port (8443).
+- **Implementation:** Quarkus Management Interface enabled on port 9000 for health checks.
+
+### Building and Deploying Services with TLS
+
+Services are automatically configured with TLS when deployed to Kubernetes. TLS certificates are managed by cert-manager using the PKI from Task 1.
+
+**Deploy certificates and services:**
+
+```bash
+cd task4
+
+# Deploy TLS certificates (see "Deploy to Kubernetes" → Step 3)
+kubectl apply -f kubernetes/certificates/
+# Wait for specific certificates to be ready
+kubectl wait --for=condition=Ready certificate task4-gruppe8-tcc-priority-service-cert task4-gruppe8-tcc-status-service-cert task4-gruppe8-tcc-ingress-cert task4-gruppe8-emergency-vehicle-client-cert -n gruppe8-tcc --timeout=60s
+
+# Build and deploy services (TLS is automatically enabled)
+mvn clean package -Dquarkus.kubernetes.deploy=true
+```
+
+**Note:** Services should NOT be run locally. They must be deployed to Kubernetes where TLS certificates are available.
+
+**Certificate Overview:**
+
+- `task4-gruppe8-tcc-priority-service-cert`: Server certificate for Priority Service (with mTLS enabled)
+- `task4-gruppe8-tcc-status-service-cert`: Server certificate for Status Service
+- `task4-gruppe8-tcc-ingress-cert`: Server certificate for Ingress (client-facing)
+- `task4-gruppe8-emergency-vehicle-client-cert`: Client certificate for Emergency Vehicle Client (mTLS). Also reused by Ingress to authenticate to Priority Service.
+
+### Technical Details
+
+**Service Configuration:**
+
+- **Priority Service:**
+  - API port: 8443 (HTTPS with mTLS, `client-auth=required`)
+  - Management port: 9000 (HTTP, for health checks without mTLS)
+  - Trust store: `/etc/certs/trust/root-certs.pem` (CA bundle from trust-manager)
+- **Status Service:**
+  - API port: 8443 (HTTPS, standard TLS)
+  - No mTLS required
+
+**Ingress Configuration:**
+
+- Client-facing: HTTPS on port 443 (certificate: `task4-gruppe8-tcc-ingress-tls`)
+- Backend to Priority Service: HTTPS with mTLS (reuses Emergency Vehicle Client certificate: `task4-gruppe8-emergency-vehicle-client-tls`)
+- Backend to Status Service: HTTPS (standard TLS)
+- SSL verification disabled for backend connections (certificates are trusted within the cluster)

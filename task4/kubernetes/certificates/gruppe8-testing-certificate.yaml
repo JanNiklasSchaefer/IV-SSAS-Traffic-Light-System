@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gruppe8-task4-testing-cert
+  namespace: gruppe8-testing
+spec:
+  secretName: gruppe8-task4-testing-cert-tls
+  commonName: gruppe8-task4-testing-cert
+  usages:
+    - client auth
+  issuerRef:
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer
+    kind: ClusterIssuer
