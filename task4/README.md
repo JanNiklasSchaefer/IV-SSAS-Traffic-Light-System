@@ -65,10 +65,6 @@ Complete overview of all REST endpoints organized by service.
 | **TCC State Controller**         | Internal | `POST` | `/api/state/change`         | Execute state change command          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
 |                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change to device          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Calls Traffic Light Device Service                   |
 |                                  | Internal | `POST` | `/api/audit/events`         | Log state change                      |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Calls TCC Audit Service                              |
-| **TCC Auth Service**             | Internal | `POST` | `/api/auth/token`           | Handle Token Requests                 | `{"grant_type": String}`     | `{"token_request": {...}}`        | `{"refresh_token": String, "access_token": String}` | Called by all Services                               |
-|                                  | Internal | `POST` | `/api/auth/introspect`      | Validate Auth Data                    | `{"access_token": String}`   |                                   | `{"status_code": {...}}`                            | Called by all Services                               |
-|                                  | Internal | `POST` | `/api/auth/userinfo`        | Get User Info                         | `{"access_token": String}`   |                                   | `{"user_info": {...}}`                              | Called by all Services                               |
-|                                  | External | -      | OIDC/OAuth2                 | Proxy to Keycloak                     |                              | OAuth2/OIDC protocol              | Keycloak tokens                                     | Calls Keycloak (Task 5)                              |
 | **TCC Audit Service**            | Internal | `POST` | `/api/audit/events`         | Log audit event                       |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Called by TCC Priority Service, TCC State Controller |
 |                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
 | **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                   | `{"traffic_status": {...}}`                         | Called by TCC Status Service                         |
@@ -83,9 +79,7 @@ Complete overview of all REST endpoints organized by service.
 - **Calls:** This service initiates the call to another service
 - **Called by:** This service receives calls from another service
 
-**Additional Note:**
-
-Most Endpoints are currently missing their authorization and authentication headers. These will be added in a later iteration when keycloak will be deployed.
+**Note** Authentication headers are missing, but are required. 
 
 ### Prerequisites
 
@@ -102,7 +96,7 @@ Additionally you need:
 
 ### Building the Project
 
-The project can be built using Maven from the `task3/` directory.
+The project can be built using Maven from the `task4/` directory.
 
 #### Build and Test
 
@@ -244,34 +238,39 @@ kubectl get ingress -n gruppe8-tcc
 
 ### Testing and Client Setup (Task 4)
 
+#### Internal TLS
+
 **Service-to-Service Endpoints**
 
 Services communicate across namespaces using Kubernetes Service Discovery:
 
-- Format: `http://<service-name>.<namespace>.svc.cluster.local:80`
-- Example: `http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:80`
-- Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
+- Format: `https://<service-name>.<namespace>.svc.cluster.local:8843`
+- Example: `https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:8443`
+- Example: `https://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:8843`
 
-Communication between Pods only works via HTTPS and on the Port 8843. 
+Communication between Pods only works via HTTPS and on the Port 8843. Thus all communication inside the cluster is encrypted using mTLS. For this we utilize Cert Manager certificates and the Quarkus TLS registry. This is done automatically while deploying.
 
-All other requests are denied. 
+Traffic on the service port is HTTPS-only, plain HTTP will be denied. The management endpoints, listen on IP 0.0.0.0 with Port 9000, with plain HTTP. 
 
-The management requests of each pod listen on IP 0.0.0.0 with Port 9000. 
+To prevent an adversary from abusing these HTTP management endpoints, counter measurements are taken. In particular pod-to-pod HTTP requests are blocked via the network policies. (Found in task4/kubernetes/network-policies) The endpoints are not exposed via a Service and are only reachable locally within the pod.
+While it is technically possible to secure the management interface with TLS, this was intentionally not done. In the chosen threat model, an adversary capable of accessing a pod’s network namespace or filesystem would already be able to access mounted secrets, making TLS protection of management endpoints ineffective against such an attacker. Therefore, network isolation is used as the primary protection mechanism.
 
-HTTP Requests are only allowed inside the pod, due to security implications. TODO: (Explanation further down below)
+This design ensures that all meaningful inter-service communication is encrypted and authenticated.
 
 #### Creating a Test Pod:
 
 In order to test internal TLS we must call the Services from inside the cluster. A testing namespace and certificate must be created and then a testing pod can be used to test all the endpoints. 
 
-It is assumed all calls are made inside the directory $/task4/. First create a namespace and apply the certificate:
+It is assumed directory $/task4/ is open. 
+
+**Step 1** Create a namespace and apply the certificate:
 
 ```
 kubectl create namespace gruppe8-testing
 kubectl apply -f kubernetes/certificates/gruppe8-testing-certificate.yaml
 ```
 
-Then create a Test Pod with the testing certificate mounted inside the testing namespace and open a shell:
+**Step 2** Ceate a Test Pod with the testing certificate mounted inside the testing namespace.
 
 ```
 # Create Testing Pod with name tls-debug
@@ -296,15 +295,15 @@ kubectl -n gruppe8-testing run tls-debug \
     ]
   }
 }'
+```
 
+**Step 3** Open a shell inside the testing pod:
 
-# Open Shell in Test Pod
+```
 kubectl -n gruppe8-testing exec -it tls-debug -- sh
 ```
 
-Inside this shell the Pods of the cluster can now be called internally.
-
-Here an example call for the time-service endpoint /api/time/validate with Body {"timestamp":1} is sent. 
+**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all endpoints can be found in /task4/TESTING.md. One example of those is:
 
 ```
 curl -v \
@@ -327,7 +326,7 @@ curl -v \
   "http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
 ```
 
-Additionally you can verify, that the management endpoints are not reachable from outside the pod. Network Policies are set up per namespace, thus checking for one service in a namespace will check the property for all services in the namespace.:
+Additionally you can verify, that the management endpoints are not reachable from outside the pod. Network Policies are set up per namespace, thus checking for one service in a namespace will check the property for all services in the namespace:
 
 ```
 #Check Management Endpoint for gruppe8-shared-services namespace
