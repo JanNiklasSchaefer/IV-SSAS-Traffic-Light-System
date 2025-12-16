@@ -248,9 +248,9 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 - Example: `https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:8443`
 - Example: `https://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:8843`
 
-Communication between Pods only works via HTTPS and on the Port 8843. Thus all communication inside the cluster is encrypted using mTLS. For this we utilize Cert Manager certificates and the Quarkus TLS registry. This is done automatically while deploying.
+All communication inside the cluster is encrypted using mTLS. For this we utilize Cert Manager certificates and the Quarkus TLS registry. This is done automatically while deploying.
 
-Traffic on the service port is HTTPS-only, plain HTTP will be denied. The management endpoints, listen on IP 0.0.0.0 with Port 9000, with plain HTTP. 
+Traffic on the service port 443 is HTTPS-only, plain HTTP will be denied. The management endpoints, listen on IP 0.0.0.0 with Port 9000, with plain HTTP. 
 
 To prevent an adversary from abusing these HTTP management endpoints, counter measurements are taken. In particular pod-to-pod HTTP requests are blocked via the network policies. (Found in task4/kubernetes/network-policies) The endpoints are not exposed via a Service and are only reachable locally within the pod.
 While it is technically possible to secure the management interface with TLS, this was intentionally not done. In the chosen threat model, an adversary capable of accessing a pod’s network namespace or filesystem would already be able to access mounted secrets, making TLS protection of management endpoints ineffective against such an attacker. Therefore, network isolation is used as the primary protection mechanism.
