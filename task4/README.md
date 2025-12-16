@@ -73,8 +73,8 @@ Complete overview of all REST endpoints organized by service.
 |                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
 | **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                   | `{"traffic_status": {...}}`                         | Called by TCC Status Service                         |
 |                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change                    | `{"state": String}`          |                                   | `{"status_code": {...}}`                            | Called by TCC State Controller                       |
-| **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             | `{"vehicle_id": String}`     | `{"coordinates": {...}}`          | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
-| **Time Service**                 | Internal | `POST` | `/api/time/validate`        | Validate timestamp                    | `{"timestamp": "..."}`       |                                   | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
+| **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             |     | `{"vehicle_id": String, "coordinates": {...}}`          | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
+| **Time Service**                 | Internal | `POST` | `/api/time/validate`        | Validate timestamp                    |        |           `{"timestamp": "..."}`                | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
 
 **Legend:**
 
@@ -145,57 +145,6 @@ This will:
 - `kubectl` configured to connect to your cluster
 - Docker registry accessible from the cluster (or use local registry with kind)
 
-### Install Linkerd
-
-The initial setup of Linkerd is needed to setup the Service Mesh and ensure mTLS between Services inside the cluster.
-
-```
-# Setting LINKERD2_VERSION sets the version to install.
-# If unset, you'll get the latest available edge version.
-export LINKERD2_VERSION=edge-25.10.7
-curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install-edge | sh
-
-# Add it to your path 
-export PATH=$HOME/.linkerd2/bin:$PATH
-
-# Install Gateway API on the Kubernetes Cluster:
-
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml
-
-# Validate Kubernetes Cluster
-
-linkerd check --pre
-
-#Install Linkered onto cluster
-
-linkerd install --crds | kubectl apply -f -
-
-#Follow it with: 
-
-linkerd install | kubectl apply -f -
-```
-
-After installing linkered to the cluster, it might take a few minutes for the pods to properly start. You can watch it with:
-
-```
-watch kubectl -n linkerd get pods
-```
-
-Once all Pods are ready you can check the installation with:
-
-```
-linkerd check
-```
-
-Depending on the version there might be some warnings, as long as it says "up-to-date" this can be ignored.
-Example Warning:
-
-```
-‼ control plane is up-to-date
-    is running version 25.10.7 but the latest edge version is 25.12.2
-    see https://linkerd.io/2/checks/#l5d-version-control for hints
-```
-
 #### Generate Kubernetes Manifests
 
 Kubernetes manifests are automatically generated during the build process. They can be found in:
@@ -258,10 +207,13 @@ kubectl wait --for=condition=Ready certificate \
 # Step 4: Deploy Ingress (before building to avoid conflicts)
 kubectl apply -f kubernetes/ingress.yaml
 
-# Step 5: Build and deploy all services
+# Step 5: Apply Network Policies
+kubectl apply -f kubernetes/network-policies
+
+# Step 6: Build and deploy all services
 mvn clean package -Dquarkus.kubernetes.deploy=true
 
-# Step 6: Verify deployment (optional)
+# Step 7: Verify deployment (optional)
 # See "Verify Deployment" section below for commands
 ```
 
@@ -290,7 +242,9 @@ kubectl get services -A | grep gruppe8
 kubectl get ingress -n gruppe8-tcc
 ```
 
-**Service-to-Service Communication**
+### Testing and Client Setup (Task 4)
+
+**Service-to-Service Endpoints**
 
 Services communicate across namespaces using Kubernetes Service Discovery:
 
@@ -298,69 +252,97 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 - Example: `http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:80`
 - Example: `http://gruppe8-tcc-auth-service.gruppe8-auth-services.svc.cluster.local:80`
 
-**Note:** Service-to-service communication currently uses HTTP. TLS for service-to-service communication will be handled by Kubernetes/Service Mesh (e.g., Istio, Linkerd) in future tasks, not at the application level.
+Communication between Pods only works via HTTPS and on the Port 8843. 
 
-### Configuring the Service Mesh
+All other requests are denied. 
 
-## Deploying the Service Mesh
+The management requests of each pod listen on IP 0.0.0.0 with Port 9000. 
 
-```
-# Deploy Service Mesh to keycloak namespace
+HTTP Requests are only allowed inside the pod, due to security implications. TODO: (Explanation further down below)
 
-kubectl get -n keycloak deploy -o yaml \
-  | linkerd inject - \
-  | kubectl apply -f -
+#### Creating a Test Pod:
 
-# Deploy service mesh to gruppe8-tcc namespace
+In order to test internal TLS we must call the Services from inside the cluster. A testing namespace and certificate must be created and then a testing pod can be used to test all the endpoints. 
 
-kubectl get -n gruppe8-tcc deploy -o yaml \
-  | linkerd inject - \
-  | kubectl apply -f -
-
-# Deploy service mesh to gruppe8-traffic-light-devices namespace
-
-kubectl get -n gruppe8-traffic-light-devices deploy -o yaml \
-  | linkerd inject - \
-  | kubectl apply -f -
-
-# Deploy service mesh to gruppe8-traffic-light-devices namespace
-
-kubectl get -n gruppe8-shared-services deploy -o yaml \
-  | linkerd inject - \
-  | kubectl apply -f -
-
-# Deploy service mesh to ingress-nginx namespace
-
-kubectl get -n ingress-nginx deploy -o yaml \
-  | linkerd inject - \
-  | kubectl apply -f -
+It is assumed all calls are made inside the directory $/task4/. First create a namespace and apply the certificate:
 
 ```
-
-### Validate Service Mesh 
-
-Validate that mTls is activated for all pods:
-
-```
-linkerd -n default edges deployment
+kubectl create namespace gruppe8-testing
+kubectl apply -f kubernetes/certificates/gruppe8-testing-certificate.yaml
 ```
 
-You should see the following as part of your output:
+Then create a Test Pod with the testing certificate mounted inside the testing namespace and open a shell:
 
 ```
-SRC           DST                                    SRC_NS        DST_NS                          SECURED          
-prometheus    gruppe8-location-validator             linkerd-viz   gruppe8-shared-services         √  
-prometheus    gruppe8-time-service                   linkerd-viz   gruppe8-shared-services         √  
-prometheus    gruppe8-tcc-audit-service              linkerd-viz   gruppe8-tcc                     √  
-prometheus    gruppe8-tcc-priority-service           linkerd-viz   gruppe8-tcc                     √  
-prometheus    gruppe8-tcc-state-controller           linkerd-viz   gruppe8-tcc                     √  
-prometheus    gruppe8-tcc-status-service             linkerd-viz   gruppe8-tcc                     √  
-prometheus    gruppe8-traffic-light-device-service   linkerd-viz   gruppe8-traffic-light-devices   √  
-prometheus    ingress-nginx-controller               linkerd-viz   ingress-nginx                   √  
-prometheus    keycloak-operator                      linkerd-viz   keycloak                        √ 
+# Create Testing Pod with name tls-debug
+kubectl -n gruppe8-testing run tls-debug \
+  --image=curlimages/curl:8.5.0 \
+  --restart=Never \
+  --overrides='
+{
+  "spec": {
+    "containers": [{
+      "name": "curl",
+      "image": "curlimages/curl:8.5.0",
+      "command": ["sh","-c","sleep 3600"],
+      "stdin": true,
+      "tty": true,
+      "volumeMounts": [
+        {"name":"certs","mountPath":"/certs","readOnly":true}
+      ]
+    }],
+    "volumes": [
+      {"name":"certs","secret":{"secretName":"gruppe8-task4-testing-cert-tls"}}
+    ]
+  }
+}'
+
+
+# Open Shell in Test Pod
+kubectl -n gruppe8-testing exec -it tls-debug -- sh
 ```
 
-### Testing and Client Setup (Task 4)
+Inside this shell the Pods of the cluster can now be called internally.
+
+Here an example call for the time-service endpoint /api/time/validate with Body {"timestamp":1} is sent. 
+
+```
+curl -v \
+  --cacert /certs/ca.crt \
+  --cert /certs/tls.crt \
+  --key /certs/tls.key \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"timestamp":1}' \
+  "https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
+```
+
+The same endpoint with HTTP will not work, showing that TLS is required:
+
+```
+curl -v \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"timestamp":1}' \
+  "http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
+```
+
+Additionally you can verify, that the management endpoints are not reachable from outside the pod. Network Policies are set up per namespace, thus checking for one service in a namespace will check the property for all services in the namespace.:
+
+```
+#Check Management Endpoint for gruppe8-shared-services namespace
+curl -v http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:9000/q/health/ready
+
+#Check Management Endpoint for gruppe8-tcc namespace
+curl -v http://gruppe8-tcc-state-controller.gruppe8-tcc.svc.cluster.local:9000/q/health/ready
+
+#Check Management Endpoint for gruppe8-tcc namespace
+curl -v http://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:9000/q/health/ready
+```
+
+If for all 3 cases the connection was refused, it is validated that http requests are only allowed inside the pod and not inbetween pods. 
+
+**Note** Most Endpoints still have hard coded answers, functionality will be added in a later task. 
 
 #### Test Service Endpoints
 
@@ -371,7 +353,7 @@ cd task4
 ./test-endpoints.sh
 ```
 
-This script tests all service endpoints from within the cluster.
+This script tests all service endpoints from within the cluster. **Note** Probably doesn't work anymore due to TLS ? 
 
 #### Setup Client Certificates {#setup-client-certificates}
 

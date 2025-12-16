@@ -28,7 +28,6 @@ spec:
     - gruppe8-tcc-status-service.gruppe8-tcc
     - gruppe8-tcc-status-service.gruppe8-tcc.svc
     - gruppe8-tcc-status-service.gruppe8-tcc.svc.cluster.local
-    - tcc.test # For Ingress
   issuerRef:
     name: ha1-gruppe8-krzysztoflagowski-clusterissuer
     kind: ClusterIssuer

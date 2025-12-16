@@ -6,7 +6,7 @@ metadata:
   namespace: gruppe8-traffic-light-devices
 spec:
   isCA: false
-  commonName: traffic-light-devices.svc.cluster.local
+  commonName: gruppe8-traffic-light-device-service.svc.cluster.local  
   subject:
     organizations:
       - Gruppe 8
@@ -20,16 +20,13 @@ spec:
     algorithm: ECDSA
     size: 256
   dnsNames:
-  # Why all those DNS NAMES ????
-    - traffic-light-devices
-    - traffic-light-devices.gruppe8-trafflic-light-devices
-    - traffic-light-devices.gruppe8-trafflic-light-devices.svc
-    - traffic-light-devices.gruppe8-trafflic-light-devices.svc.cluster.local
-    - gruppe8-traffic-light-devices
-    - gruppe8-traffic-light-devices.gruppe8-trafflic-light-devices
-    - gruppe8-traffic-light-devices.gruppe8-trafflic-light-devices.svc
-    - gruppe8-traffic-light-devices.gruppe8-trafflic-light-devices.svc.cluster.local
-    - tcc.test # For Ingress
+    # Short service name (works from same namespace)
+    - gruppe8-traffic-light-device-service
+
+    # Fully qualified service names (works from anywhere)
+    - gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices
+    - gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc
+    - gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local
   issuerRef:
     name: ha1-gruppe8-krzysztoflagowski-clusterissuer
     kind: ClusterIssuer

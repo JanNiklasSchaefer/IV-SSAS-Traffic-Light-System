@@ -12,7 +12,7 @@ spec:
       - Gruppe 8
     organizationalUnits:
       - Task 4
-  secretName: task4-gruppe8-audit-service-tls
+  secretName: task4-gruppe8-tcc-audit-service-tls
   usages:
     - server auth
     - client auth # Required for mTLS
@@ -28,7 +28,6 @@ spec:
     - gruppe8-tcc-audit-service.gruppe8-tcc
     - gruppe8-tcc-audit-service.gruppe8-tcc.svc
     - gruppe8-tcc-audit-service.gruppe8-tcc.svc.cluster.local
-    - tcc.test # For Ingress
   issuerRef:
     name: ha1-gruppe8-krzysztoflagowski-clusterissuer
     kind: ClusterIssuer

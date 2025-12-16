@@ -28,7 +28,6 @@ spec:
     - gruppe8-time-service.gruppe8-shared-services
     - gruppe8-time-service.gruppe8-shared-services.svc
     - gruppe8-time-service.gruppe8-shared-services.svc.cluster.local
-    - tcc.test # For Ingress
   issuerRef:
     name: ha1-gruppe8-krzysztoflagowski-clusterissuer
     kind: ClusterIssuer
