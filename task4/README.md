@@ -2,14 +2,14 @@
 
 ### Overview
 
-Task 4 focuses on deploying microservices to Kubernetes with TLS encryption for client-to-service communication. The implementation includes:
+Task 4 focuses on deploying microservices to Kubernetes with comprehensive TLS encryption. The implementation includes:
 
 - **TLS encryption** for all client-facing services (Priority Service, Status Service)
 - **Mutual TLS (mTLS)** between Emergency Vehicle Client and Priority Service for enhanced security
 - **Kubernetes deployment** with automated certificate management using cert-manager
 - **Ingress configuration** for external access to services via HTTPS
 
-Service-to-service communication within the cluster uses HTTP and will be secured by Kubernetes/Service Mesh in future tasks.
+Service-to-service communication within the cluster uses HTTPS with mutual TLS (mTLS) encryption.
 
 ### Repository Layout
 
@@ -57,29 +57,29 @@ Complete overview of all REST endpoints organized by service.
 
 Complete overview of all REST endpoints organized by service.
 
-| Service                          | Type     | Method | Path                        | Purpose                               | Query Parameters             | Parameters / Request Body         | Response                                            | Communication                                        |
-| -------------------------------- | -------- | ------ | --------------------------- | ------------------------------------- | ---------------------------- | --------------------------------- | --------------------------------------------------- | ---------------------------------------------------- |
-| **TCC Priority Service**         | Internal | `POST` | `/api/state/change`         | Trigger state change                  |                              | `{"state_change_request": {...}}` | `{"status_code": {...}}`                            | Calls TCC State Controller                           |
-|                                  | Internal | `POST` | `/api/audit/events`         | Log priority request                  | `{"audit_event" : {...} }`   |                                   | `{"status_code": {...}}`                            | Calls TCC Audit Service                              |
-| **TCC Status Service**           | Internal | `GET`  | `/api/device/traffic-state` | Retrieve current state                | `{"vehicle" : Boolean }`     | -                                 | `{"traffic_status": {...}}`                         | Calls Traffic Light Device Service                   |
-| **TCC State Controller**         | Internal | `POST` | `/api/state/change`         | Execute state change command          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
-|                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change to device          |                              | `{"traffic_status": {...}}`       | `{"status_code": {...}}`                            | Calls Traffic Light Device Service                   |
-|                                  | Internal | `POST` | `/api/audit/events`         | Log state change                      |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Calls TCC Audit Service                              |
-| **TCC Audit Service**            | Internal | `POST` | `/api/audit/events`         | Log audit event                       |                              | `{"audit_event" : {...}}`         | `{"status_code": {...}}`                            | Called by TCC Priority Service, TCC State Controller |
-|                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |                                   | `{"audit_logs": {...}}`                             | TODO: Admin Service (Task 5)                         |
-| **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                   | `{"traffic_status": {...}}`                         | Called by TCC Status Service                         |
-|                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change                    | `{"state": String}`          |                                   | `{"status_code": {...}}`                            | Called by TCC State Controller                       |
-| **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             |     | `{"vehicle_id": String, "coordinates": {...}}`          | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
-| **Time Service**                 | Internal | `POST` | `/api/time/validate`        | Validate timestamp                    |        |           `{"timestamp": "..."}`                | `{"status_code": {...}}`                            | Called by TCC Priority Service                       |
+| Service                          | Type     | Method | Path                        | Purpose                               | Query Parameters             | Parameters / Request Body                      | Response                    | Communication                                        |
+| -------------------------------- | -------- | ------ | --------------------------- | ------------------------------------- | ---------------------------- | ---------------------------------------------- | --------------------------- | ---------------------------------------------------- |
+| **TCC Priority Service**         | Internal | `POST` | `/api/state/change`         | Trigger state change                  |                              | `{"state_change_request": {...}}`              | `{"status_code": {...}}`    | Calls TCC State Controller                           |
+|                                  | Internal | `POST` | `/api/audit/events`         | Log priority request                  | `{"audit_event" : {...} }`   |                                                | `{"status_code": {...}}`    | Calls TCC Audit Service                              |
+| **TCC Status Service**           | Internal | `GET`  | `/api/device/traffic-state` | Retrieve current state                | `{"vehicle" : Boolean }`     | -                                              | `{"traffic_status": {...}}` | Calls Traffic Light Device Service                   |
+| **TCC State Controller**         | Internal | `POST` | `/api/state/change`         | Execute state change command          |                              | `{"traffic_status": {...}}`                    | `{"status_code": {...}}`    | Called by TCC Priority Service                       |
+|                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change to device          |                              | `{"traffic_status": {...}}`                    | `{"status_code": {...}}`    | Calls Traffic Light Device Service                   |
+|                                  | Internal | `POST` | `/api/audit/events`         | Log state change                      |                              | `{"audit_event" : {...}}`                      | `{"status_code": {...}}`    | Calls TCC Audit Service                              |
+| **TCC Audit Service**            | Internal | `POST` | `/api/audit/events`         | Log audit event                       |                              | `{"audit_event" : {...}}`                      | `{"status_code": {...}}`    | Called by TCC Priority Service, TCC State Controller |
+|                                  | Internal | `GET`  | `/api/audit/logs`           | Retrieve audit logs (stub for Task 3) | `{"from": long, "to": long}` |                                                | `{"audit_logs": {...}}`     | TODO: Admin Service (Task 5)                         |
+| **Traffic Light Device Service** | Internal | `GET`  | `/api/device/traffic-state` | Get current traffic light state       |                              |                                                | `{"traffic_status": {...}}` | Called by TCC Status Service                         |
+|                                  | Internal | `POST` | `/api/device/change-state`  | Apply state change                    | `{"state": String}`          |                                                | `{"status_code": {...}}`    | Called by TCC State Controller                       |
+| **Location Validator Service**   | Internal | `POST` | `/api/location/vehicle`     | Validate vehicle location             |                              | `{"vehicle_id": String, "coordinates": {...}}` | `{"status_code": {...}}`    | Called by TCC Priority Service                       |
+| **Time Service**                 | Internal | `POST` | `/api/time/validate`        | Validate timestamp                    |                              | `{"timestamp": "..."}`                         | `{"status_code": {...}}`    | Called by TCC Priority Service                       |
 
-**Legend:**
+**Legend API Calls:**
 
 - **External:** Communication from clients outside the cluster
 - **Internal:** Service-to-service communication within the cluster
 - **Calls:** This service initiates the call to another service
 - **Called by:** This service receives calls from another service
 
-**Note** Authentication headers are missing, but are required. 
+**Note**: Authentication headers are missing, but are required.
 
 ### Prerequisites
 
@@ -94,43 +94,6 @@ Additionally you need:
 - **PKI from Task 1**: The Intermediate CA (`ha1-gruppe8-krzysztoflagowski-clusterissuer`) must be deployed in the cluster. If not already deployed, see "Deploy to Kubernetes" → Step 3 for instructions.
 - **cert-manager** and **trust-manager** must be installed in the cluster
 
-### Building the Project
-
-The project can be built using Maven from the `task4/` directory.
-
-#### Build and Test
-
-To build all services and clients and run tests:
-
-```bash
-cd task4
-mvn clean install
-```
-
-This will:
-
-- Compile all services and clients
-- Run tests (if any)
-- Install artifacts to local Maven repository
-
-#### Build with Container Images
-
-To build all services and clients including Docker container images:
-
-```bash
-cd task4
-mvn clean package
-```
-
-This will:
-
-- Compile all services and clients
-- Build Docker container images for each service
-- Images are built using Jib and stored locally
-- Container images are tagged for the local registry (`localhost:5001`)
-
-**Note:** If Docker is not available, use `mvn clean package -Dquarkus.container-image.build=false` to skip container image building.
-
 ### Kubernetes Deployment
 
 #### Prerequisites
@@ -138,21 +101,6 @@ This will:
 - Kubernetes cluster running (e.g., kind, minikube, or cloud provider)
 - `kubectl` configured to connect to your cluster
 - Docker registry accessible from the cluster (or use local registry with kind)
-
-#### Generate Kubernetes Manifests
-
-Kubernetes manifests are automatically generated during the build process. They can be found in:
-
-```
-task4/services/<service-name>/target/kubernetes/kubernetes.yml
-```
-
-To generate manifests without deploying:
-
-```bash
-cd task4
-mvn clean package -Dquarkus.kubernetes.deploy=false
-```
 
 #### Deploy to Kubernetes
 
@@ -250,17 +198,17 @@ Services communicate across namespaces using Kubernetes Service Discovery:
 
 All communication inside the cluster is encrypted using mTLS. For this we utilize Cert Manager certificates and the Quarkus TLS registry. This is done automatically while deploying.
 
-Traffic on the service port 443 is HTTPS-only, plain HTTP will be denied. The management endpoints, listen on IP 0.0.0.0 with Port 9000, with HTTPS. These Endpoints can not be accessed from outside the pod. 
+Traffic on the service port 443 is HTTPS-only, plain HTTP will be denied. The management endpoints, listen on IP 0.0.0.0 with Port 9000, with HTTPS. These Endpoints can not be accessed from outside the pod.
 
-All communication between pods additionally requires HTTPS due to the network policies. 
+All communication between pods additionally requires HTTPS due to the network policies.
 
-Overall this ensures that all communication inside the cluster is done encrypted. This prevents adversaries from listening to the network or trying to access the network via HTTP. An Adversary would need to break the authentication or get a copy of a secret in order to access any data inside the cluster. 
+Overall this ensures that all communication inside the cluster is done encrypted. This prevents adversaries from listening to the network or trying to access the network via HTTP. An Adversary would need to break the authentication or get a copy of a secret in order to access any data inside the cluster.
 
 #### Creating a Test Pod:
 
-In order to test internal TLS we must call the Services from inside the cluster. A testing namespace and certificate must be created and then a testing pod can be used to test all the endpoints. 
+In order to test internal TLS we must call the Services from inside the cluster. A testing namespace and certificate must be created and then a testing pod can be used to test all the endpoints.
 
-It is assumed directory $/task4/ is open. 
+It is assumed directory $/task4/ is open.
 
 **Step 1** Create a namespace and apply the certificate:
 
@@ -326,9 +274,25 @@ curl -v \
   "http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
 ```
 
-**Note** Most Endpoints still have hard coded answers, functionality will be added in a later task. 
+**Note** Most Endpoints still have hard coded answers, functionality will be added in a later task.
 
-## Setting up External TLS
+## External TLS
+
+**Why External TLS?** Clients running outside the Kubernetes cluster need to authenticate and encrypt their communication with the services. This setup enables TLS encryption for client-to-service communication, with mTLS specifically for the Emergency Vehicle Client.
+
+**How External TLS works:**
+
+**Client-to-Service Endpoints:**
+
+- **Ingress URL:** `https://tcc.test` (TLS termination point)
+- **Routes:**
+  - `https://tcc.test/api/priority/*` → Priority Service (TLS + mTLS for Emergency)
+  - `https://tcc.test/api/status/*` → Status Service (TLS)
+- **Certificate Storage:** Client certificates stored as Kubernetes secrets, extracted locally via scripts
+- **Authentication:**
+  - **Emergency Vehicle:** mTLS (client cert + server cert)
+  - **Other Clients:** Standard TLS (server cert only)
+- **Local Setup:** Certificates extracted to `task4/certs/` and copied to client resources
 
 #### Setup Client Certificates {#setup-client-certificates}
 
@@ -371,9 +335,17 @@ If you need more control or want to extract certificates manually, you can use t
 
 These scripts are useful if you only need specific certificates or want to customize the extraction process.
 
-#### Run Clients
+#### Run Clients (External TLS Setup)
 
-**Note:** Make sure you've completed [Setup Client Certificates](#setup-client-certificates) first and added `tcc.test` to your `/etc/hosts` file (see below).
+This section explains how to run clients locally that communicate with Kubernetes-deployed services using TLS encryption.
+
+**Prerequisites:**
+
+- Services must be deployed to Kubernetes (see "Deploy to Kubernetes" section)
+- Client certificates must be extracted ([Setup Client Certificates](#setup-client-certificates))
+- `tcc.test` must be added to your `/etc/hosts` file (see below)
+
+**Note:** Clients run locally (outside Kubernetes) and establish TLS/mTLS connections to services running in the cluster.
 
 **Setup `/etc/hosts`:**
 
@@ -395,11 +367,59 @@ cd task4/clients/mayor-vehicle-client
 mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
+**Example successful output:**
+
+```
+=== Mayor Vehicle Client ===
+Using Quarkus REST Client
+
+--- GET /api/status/traffic?vehicle=true ---
+Status: 200 OK
+State: green
+Timestamp: 2024-01-01T12:00:00Z
+
+--- POST /api/priority/requests ---
+Request: mayor
+Status: 200 OK
+Response status: accepted
+Request ID: 12eee0e1-7215-43ed-9852-5ca9be0d7600
+
+--- GET /api/priority/requests/{requestId} ---
+Using dummy requestId: 123e4567-e89b-12d3-a456-426614174000
+Status: 200 OK
+```
+
 **mTLS client** (Emergency Vehicle):
 
 ```bash
 cd task4/clients/emergency-vehicle-client
 mvn quarkus:dev -Dbase.url=https://tcc.test
+```
+
+**Example successful output (mTLS):**
+
+```
+=== Emergency Vehicle Client ===
+Using Quarkus REST Client
+
+--- GET /api/status/traffic?vehicle=true ---
+Status: 200 OK
+State: green
+Timestamp: 2024-01-01T12:00:00Z
+
+--- POST /api/priority/requests ---
+Request: emergency
+Status: 200 OK
+Response status: accepted
+Request ID: 2fce1ab1-9a1a-4bb8-88e1-9b9faf1ff44f
+
+--- GET /api/priority/requests/{requestId} ---
+Using dummy requestId: 123e4567-e89b-12d3-a456-426614174000
+Status: 200 OK
+Request ID: 123e4567-e89b-12d3-a456-426614174000
+Status: NOT_FOUND
+Vehicle Type: null
+=== Demo finished ===
 ```
 
 **Note:** The `-Dbase.url=https://tcc.test` parameter is **required** to override the default `https://localhost:8443` from `application.properties`.
@@ -419,7 +439,7 @@ mvn quarkus:dev -Dbase.url=https://tcc.test
 
 **Note:** Port-forwarding only allows access to one service at a time. Ingress (recommended) allows access to all services via a single hostname.
 
-## TLS Configuration (Task 4)
+## TLS Configuration
 
 All client-to-service communication is encrypted using TLS. The **Emergency Vehicle Client** uses **mutual TLS (mTLS)** when communicating with the **Priority Service**.
 
@@ -427,9 +447,9 @@ All client-to-service communication is encrypted using TLS. The **Emergency Vehi
 
 **TLS for Client-to-Service Communication:**
 
-- **Decision:** TLS is enabled for all microservices that are accessed by clients (Priority Service, Status Service). Service-to-service communication within the cluster uses plain HTTP and will be secured by Kubernetes/Service Mesh in future tasks.
-- **Rationale:** Ensures end-to-end encryption from clients through the Ingress to the services. Service-to-service TLS will be handled at the infrastructure level (e.g., Istio, Linkerd) rather than at the application level.
-- **Implementation:** Services use TLS certificates issued by cert-manager, mounted as Kubernetes secrets, for client-facing endpoints only.
+- **Decision:** TLS is enabled for all microservices that are accessed by clients (Priority Service, Status Service). Service-to-service communication within the cluster uses HTTPS with mutual TLS (mTLS) encryption.
+- **Rationale:** Ensures end-to-end encryption from clients through the Ingress to the services. Service-to-service communication is secured at the application level using mTLS.
+- **Implementation:** Services use TLS certificates issued by cert-manager, mounted as Kubernetes secrets, for both client-facing and internal service-to-service communication.
 
 **Mutual TLS (mTLS):**
 
@@ -442,36 +462,9 @@ All client-to-service communication is encrypted using TLS. The **Emergency Vehi
 
 **Health Checks:**
 
-- **Decision:** Health checks run on a separate management port (9000) without mTLS.
-- **Rationale:** Kubernetes health checks cannot provide client certificates. Using a separate HTTP port for health checks allows the service to remain healthy while enforcing mTLS on the main API port (8443).
+- **Decision:** Health checks run on a separate management port (9000) with HTTPS but without mTLS.
+- **Rationale:** Kubernetes health checks cannot provide client certificates. Using a separate HTTPS port for health checks allows the service to remain healthy while enforcing mTLS on the main API port (8443).
 - **Implementation:** Quarkus Management Interface enabled on port 9000 for health checks.
-
-### Building and Deploying Services with TLS
-
-Services are automatically configured with TLS when deployed to Kubernetes. TLS certificates are managed by cert-manager using the PKI from Task 1.
-
-**Deploy certificates and services:**
-
-```bash
-cd task4
-
-# Deploy TLS certificates (see "Deploy to Kubernetes" → Step 3)
-kubectl apply -f kubernetes/certificates/
-# Wait for specific certificates to be ready
-kubectl wait --for=condition=Ready certificate task4-gruppe8-tcc-priority-service-cert task4-gruppe8-tcc-status-service-cert task4-gruppe8-tcc-ingress-cert task4-gruppe8-emergency-vehicle-client-cert -n gruppe8-tcc --timeout=60s
-
-# Build and deploy services (TLS is automatically enabled)
-mvn clean package -Dquarkus.kubernetes.deploy=true
-```
-
-**Note:** Services should NOT be run locally. They must be deployed to Kubernetes where TLS certificates are available.
-
-**Certificate Overview:**
-
-- `task4-gruppe8-tcc-priority-service-cert`: Server certificate for Priority Service (with mTLS enabled)
-- `task4-gruppe8-tcc-status-service-cert`: Server certificate for Status Service
-- `task4-gruppe8-tcc-ingress-cert`: Server certificate for Ingress (client-facing)
-- `task4-gruppe8-emergency-vehicle-client-cert`: Client certificate for Emergency Vehicle Client (mTLS). Also reused by Ingress to authenticate to Priority Service.
 
 ### Technical Details
 

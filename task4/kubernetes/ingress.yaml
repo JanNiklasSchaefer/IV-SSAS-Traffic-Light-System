@@ -16,6 +16,7 @@ metadata:
     # Do NOT use cert-manager.io/issuer annotation to avoid duplicate certificates
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # mTLS Configuration for Priority Service
     # mTLS Configuration: Ingress uses client certificate to authenticate to Priority Service
     # Note: Reusing Emergency Vehicle Client certificate (both are client auth certificates)
     # Note: proxy-ssl-verify is off because certificates are trusted within the cluster
