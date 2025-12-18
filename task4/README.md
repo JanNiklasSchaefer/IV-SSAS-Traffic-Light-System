@@ -401,7 +401,7 @@ curl -v \
   "http://tcc.test/api/time/validate"
 ```
 
-Expected Output:
+**Example successful output:**
 
 ```
 * Host tcc.test:80 was resolved.
