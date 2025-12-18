@@ -249,7 +249,11 @@ kubectl -n gruppe8-testing run tls-debug \
 kubectl -n gruppe8-testing exec -it tls-debug -- sh
 ```
 
-**Note** If the pod stays open for a longer time, the pod might become completed. In that case simply delete the pod and repeat Step 2 to create a new testing pod.
+**Note** If the pod stays open for a longer time, the pod might become completed. In that case simply delete the pod and repeat Step 2 to create a new testing pod:
+
+```
+kubectl delete pod tls-debug -n gruppe8-testing
+```
 
 **Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all Services can be found in /task4/endpoint-calls.md. One example of those is:
 
@@ -301,8 +305,6 @@ curl -v \
 To run clients locally, extract and configure certificates:
 
 ```bash
-cd task4
-
 # Extract CA certificate and convert to PKCS12 for all clients
 ./setup-certs-now.sh
 ```
@@ -363,7 +365,7 @@ sudo nano /etc/hosts
 **Standard TLS clients** (Mayor, Other Vehicle, Pedestrian):
 
 ```bash
-cd task4/clients/mayor-vehicle-client
+cd clients/mayor-vehicle-client
 mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
@@ -392,7 +394,7 @@ Status: 200 OK
 **mTLS client** (Emergency Vehicle):
 
 ```bash
-cd task4/clients/emergency-vehicle-client
+cd clients/emergency-vehicle-client
 mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
