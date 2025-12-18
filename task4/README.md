@@ -391,7 +391,7 @@ Using dummy requestId: 123e4567-e89b-12d3-a456-426614174000
 Status: 200 OK
 ```
 
-Additionally you can confirm that the endpoints are only reachable via HTTP by doing a simple curl request to the exposed Ingres endpoints:
+Additionally you can confirm that the endpoints are only reachable via HTTP by doing a simple curl request to the exposed Ingress endpoints:
 
 ```
 curl -v \
