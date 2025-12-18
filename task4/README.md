@@ -391,6 +391,48 @@ Using dummy requestId: 123e4567-e89b-12d3-a456-426614174000
 Status: 200 OK
 ```
 
+Additionally you can confirm that the endpoints are only reachable via HTTP by doing a simple curl request to the exposed Ingres endpoints:
+
+```
+curl -v \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"timestamp":1}' \
+  "http://tcc.test/api/time/validate"
+```
+
+Expected Output:
+
+```
+* Host tcc.test:80 was resolved.
+* IPv6: (none)
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:80...
+* Connected to tcc.test (127.0.0.1) port 80
+> POST /api/time/validate HTTP/1.1
+> Host: tcc.test
+> User-Agent: curl/8.5.0
+> Content-Type: application/json
+> Accept: application/json
+> Content-Length: 15
+> 
+< HTTP/1.1 308 Permanent Redirect
+< Date: Thu, 18 Dec 2025 02:06:27 GMT
+< Content-Type: text/html
+< Content-Length: 164
+< Connection: keep-alive
+< Location: https://tcc.test/api/time/validate
+< 
+<html>
+<head><title>308 Permanent Redirect</title></head>
+<body>
+<center><h1>308 Permanent Redirect</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+* Connection #0 to host tcc.test left intact
+```
+
 **mTLS client** (Emergency Vehicle):
 
 ```bash
