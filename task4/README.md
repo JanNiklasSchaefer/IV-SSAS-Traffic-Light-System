@@ -586,7 +586,9 @@ in tcc.priority.services ist
 
 
 
-### update keycloak.yaml
+# How to get acces controll running: update keycloak.yaml 
+
+change "hostname" entry to, keep everything else the same: 
 
 ```
   hostname:
@@ -594,6 +596,51 @@ in tcc.priority.services ist
     strict: false
     backchannelDynamic: true
 ```
+
+afterwards apply file with 
+
+```
+kubectl apply -f keycloak.yaml -n keycloak
+```
+
+applying the yaml should restart the keycloak instance with the new metadata set 
+
+## Importing the quarkus realm 
+
+import quarkus realm that is sinide quarkus.json
+
+1) Create/Update the Secret containing the realm export
+
+```
+kubectl -n keycloak create secret generic realm-import \
+  --from-file=quarkus.json=./quarkus.json \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+2) Create the KeycloakRealmImport that targets your Keycloak instance
+
+```
+kubectl apply -f - <<'YAML'
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakRealmImport
+metadata:
+  name: realm-import
+  namespace: keycloak
+spec:
+  keycloakCRName: keycloak
+  realm:
+    secretName: realm-import
+YAML
+```
+
+3) Watch import status
+
+```
+kubectl -n keycloak get keycloakrealmimports
+kubectl -n keycloak describe keycloakrealmimport realm-import
+```
+
+You want to see a success-ish Phase/Conditions (often done / Ready=True depending on operator version).
 
 ## Access Scheme:
 
@@ -663,3 +710,21 @@ and pom.xml:
 # TEMP debug logs
 quarkus.log.category."io.quarkus.oidc".level=DEBUG
 quarkus.log.category."io.quarkus.security".level=DEBUG
+
+
+
+# 1. Set the current namespace to keycloak
+kubectl config set-context --current --namespace=keycloak
+
+# Export the realm to a file inside the pod
+kubectl exec -n keycloak keycloak-0 -- \
+  /opt/keycloak/bin/kc.sh export --optimized \
+  --realm group8-task5 \
+  --file /tmp/group8-task5-realm-import.json
+
+# Confirm it exists
+kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
+
+# Copy it out without kubectl cp (no tar needed)
+kubectl exec -n keycloak keycloak-0 -- cat /tmp/group8-task5-realm-import.json > group8-task5-realm-import.json
+
