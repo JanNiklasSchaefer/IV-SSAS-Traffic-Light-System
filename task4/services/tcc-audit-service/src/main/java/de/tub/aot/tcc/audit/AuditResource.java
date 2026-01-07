@@ -1,5 +1,7 @@
 package de.tub.aot.tcc.audit;
 
+import jakarta.annotation.security.DenyAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -14,6 +16,7 @@ import java.util.List;
 
 @Path("/api/audit")
 @ApplicationScoped
+@DenyAll
 public class AuditResource {
 
     private List<Object> auditLogs = new ArrayList<>();
@@ -22,6 +25,7 @@ public class AuditResource {
     @Path("/events")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role"})
     public Response logEvent(Object auditEvent) {
         auditLogs.add(auditEvent);
         return Response.ok().build();
@@ -30,6 +34,7 @@ public class AuditResource {
     @GET
     @Path("/logs")
     @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role"})
     public Response getLogs(@QueryParam("from") long from, @QueryParam("to") long to) {
         return Response.ok(auditLogs).build();
     }

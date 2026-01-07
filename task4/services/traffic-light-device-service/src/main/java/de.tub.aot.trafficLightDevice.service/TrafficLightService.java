@@ -9,15 +9,19 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Consumes;
+import jakarta.annotation.security.DenyAll;
+import jakarta.annotation.security.RolesAllowed;
 
 
 @Path("/api/device")
 @ApplicationScoped
+@DenyAll
 public class TrafficLightService {
 
     @GET
     @Path("/traffic-state")
     @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
     public Response getTrafficState() {
         TrafficStatus status = new TrafficStatus();
         status.setState("green");
@@ -29,6 +33,7 @@ public class TrafficLightService {
     @Path("/change-state")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
     public Response changeState(@QueryParam("state") String currentState) {
 
         TrafficStatus newStatus = new TrafficStatus();

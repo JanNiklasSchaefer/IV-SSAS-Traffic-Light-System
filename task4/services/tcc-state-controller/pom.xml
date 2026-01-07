@@ -84,7 +84,19 @@
          <artifactId>netty-resolver-dns-native-macos</artifactId>
          <scope>runtime</scope>
       </dependency>
-   </dependencies>
+      <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-oidc-client</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-rest-client-oidc-filter</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-oidc</artifactId>
+      </dependency>
+      </dependencies>
    <build>
       <plugins>
          <plugin>

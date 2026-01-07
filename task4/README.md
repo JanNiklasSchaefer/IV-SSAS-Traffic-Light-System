@@ -527,3 +527,139 @@ All client-to-service communication is encrypted using TLS. The **Emergency Vehi
 - Client-facing: HTTPS on port 443 (certificate: `task4-gruppe8-tcc-ingress-tls`)
 - Backend to Priority Service: HTTPS with mTLS (reuses Emergency Vehicle Client certificate: `task4-gruppe8-emergency-vehicle-client-tls`)
 - Backend to Status Service: HTTPS
+
+
+
+## UPDATE Cluster DNS so keycloak.test resolves internally makes mapping way easier
+
+Find your Keycloak service ClusterIP:
+
+```
+kubectl -n keycloak get svc keycloak-service -o wide
+```
+
+Patch CoreDNS ConfigMap to map keycloak.test → that IP. (This opens a vim instance of the file to edit)
+
+```
+kubectl -n kube-system edit configmap coredns
+```
+
+Inside the Corefile, add a hosts block above forward:
+
+```
+hosts {
+  10.96.190.102 keycloak.test
+  fallthrough
+}
+```
+
+Restart CoreDNS:
+
+```
+kubectl -n kube-system rollout restart deploy/coredns
+```
+
+## TODO'S
+
+keycloak service to service for all services
+set up keycloak so its redeployable across systems
+create yaml for all secrets so they are not plaintext
+look at keycloak via https 
+setup external client connection to public ingress url of keycloak
+check and implement for "interactive client" (see feedback last task)
+unify role names (currently, some are service some are role. I fucked up here)
+make all folders 1 to task5 i mean we have releases anyway and could convert back if we need.
+
+zu klären wieso:
+
+# Time Service REST Client (internal service-to-service with mTLS)
+de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/url=https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443
+de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/trust-store=tls
+de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/key-store=tls
+
+in tcc.priority.services ist 
+
+
+-FIX 500 error when calling priority service and we forward to endpoint. (currently commented out) some weird mtls / tls server/client bullshit bug 
+
+%prod.quarkus.rest-client.traffic-light-api.tls-configuration-name=http  (irgendwie sowas hier halt wird der fix sein glaube ich, der handshake beim weiterleiten failed)
+
+
+
+### update keycloak.yaml
+
+```
+  hostname:
+    hostname: https://keycloak.test/keycloak
+    strict: false
+    backchannelDynamic: true
+```
+
+## Access Scheme:
+
+How to read it : 
+
+Client -> Services it can use
+
+### DONE Connections 
+Tcc State controller  -> trafficLightDeviceService, audit-service
+
+tcc  status service -> time service, trafficLightDeviceService
+
+tcc priority -> state controller, time service, audit-service, location validator
+
+
+#### fields to copy for clients
+
+# Setting up OIDC Client to get send requests to other services with access control
+
+application.properties:
+
+
+%prod.quarkus.oidc-client.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
+%prod.quarkus.oidc-client.client-id=tcc-state-controller
+%prod.quarkus.oidc-client.credentials.secret=MEb3nfjgTGkEHiZs8NugXxKTf2UqHdVC
+%prod.quarkus.oidc-client.grant.type=client
+
+#Set Client base url for api calls for different clients of service
+%prod.quarkus.rest-client.traffic-light-api.url=https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443
+
+
+and pom.xml:
+
+      <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-oidc-client</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-rest-client-oidc-filter</artifactId>
+      </dependency>
+
+
+#### fields to copy for services 
+
+application.properties:
+
+#set oidc stuff 
+quarkus.oidc.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
+quarkus.oidc.discovery-enabled=true
+
+quarkus.oidc.application-type=service
+
+quarkus.oidc.roles.role-claim-path=resource_access/traffic-light-device/roles
+
+quarkus.oidc.roles.source=accesstoken
+
+and pom.xml:
+
+      <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-oidc</artifactId>
+      </dependency>
+
+#### turn on debugging
+
+# TEMP debug logs
+quarkus.log.category."io.quarkus.oidc".level=DEBUG
+quarkus.log.category."io.quarkus.security".level=DEBUG
