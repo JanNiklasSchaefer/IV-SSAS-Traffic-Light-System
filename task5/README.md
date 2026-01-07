@@ -1,20 +1,13 @@
-## Task 4 – Microservices, TLS, and Deployment Guide
+## Task 5 – Access Controll
 
 ### Overview
 
-Task 4 focuses on deploying microservices to Kubernetes with comprehensive TLS encryption. The implementation includes:
-
-- **TLS encryption** for all client-facing services (Priority Service, Status Service)
-- **Mutual TLS (mTLS)** between Emergency Vehicle Client and Priority Service for enhanced security
-- **Kubernetes deployment** with automated certificate management using cert-manager
-- **Ingress configuration** for external access to services via HTTPS
-
-Service-to-service communication within the cluster uses HTTPS with mutual TLS (mTLS) encryption.
+Task 4 focuses Access Controll
 
 ### Repository Layout
 
 ```
-task4/
+task5/
 ├── services/                # Source & Docker context for each microservice
 │   ├── tcc-priority-service/        # → gruppe8-tcc namespace (TLS + mTLS enabled)
 │   ├── tcc-state-controller/         # → gruppe8-tcc namespace
@@ -119,7 +112,7 @@ Follow these steps in order:
 
 ```bash
 # Step 1: Build and test (optional, but recommended)
-cd task4
+cd task5
 mvn clean install
 
 # Step 2: Create namespaces
@@ -208,7 +201,7 @@ Overall this ensures that all communication inside the cluster is done encrypted
 
 In order to test internal TLS we must call the Services from inside the cluster. A testing namespace and certificate must be created and then a testing pod can be used to test all the endpoints.
 
-It is assumed directory $/task4/ is open.
+It is assumed directory $/task5/ is open.
 
 **Step 1** Create a namespace and apply the certificate:
 
@@ -255,7 +248,7 @@ kubectl -n gruppe8-testing exec -it tls-debug -- sh
 kubectl delete pod tls-debug -n gruppe8-testing
 ```
 
-**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all Services can be found in /task4/endpoint-calls.md. One example of those is:
+**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all Services can be found in /task5/endpoint-calls.md. One example of those is:
 
 ```
 curl -v \
@@ -296,7 +289,7 @@ curl -v \
 - **Authentication:**
   - **Emergency Vehicle:** mTLS (client cert + server cert)
   - **Other Clients:** Standard TLS (server cert only)
-- **Local Setup:** Certificates extracted to `task4/certs/` and copied to client resources
+- **Local Setup:** Certificates extracted to `task5/certs/` and copied to client resources
 
 #### Setup Client Certificates {#setup-client-certificates}
 
@@ -477,7 +470,7 @@ If you prefer port-forwarding instead of Ingress:
 kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8080:80
 
 # Then run the client (still requires tcc.test hostname)
-cd task4/clients/emergency-vehicle-client
+cd task5/clients/emergency-vehicle-client
 mvn quarkus:dev -Dbase.url=https://tcc.test
 ```
 
@@ -524,8 +517,8 @@ All client-to-service communication is encrypted using TLS. The **Emergency Vehi
 
 **Ingress Configuration:**
 
-- Client-facing: HTTPS on port 443 (certificate: `task4-gruppe8-tcc-ingress-tls`)
-- Backend to Priority Service: HTTPS with mTLS (reuses Emergency Vehicle Client certificate: `task4-gruppe8-emergency-vehicle-client-tls`)
+- Client-facing: HTTPS on port 443 (certificate: `task5-gruppe8-tcc-ingress-tls`)
+- Backend to Priority Service: HTTPS with mTLS (reuses Emergency Vehicle Client certificate: `task5-gruppe8-emergency-vehicle-client-tls`)
 - Backend to Status Service: HTTPS
 
 
