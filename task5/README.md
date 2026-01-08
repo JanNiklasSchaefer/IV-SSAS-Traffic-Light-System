@@ -587,7 +587,7 @@ in tcc.priority.services ist
 # Find your Keycloak service ClusterIP:
 kubectl -n keycloak get svc keycloak-service -o wide
 
-# Patch CoreDNS ConfigMap to map keycloak.test → that IP:
+# Patch CoreDNS ConfigMap to map keycloak.test → that IP:V
 kubectl -n kube-system edit configmap coredns
 ```
 
@@ -704,123 +704,18 @@ kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
 
 ---
 
-## 3. Import the realm into Keycloak
+## 3. Import the realm into Keycloak (change http management port when keycloak is still turned on)
+
 
 ```bash
 kubectl exec -n keycloak keycloak-0 -- \
   /opt/keycloak/bin/kc.sh import --optimized \
+  --http-management-port=9002 \
   --file /tmp/group8-task5-realm-import.json
 ```
-
 Expected output includes lines indicating successful realm import.
 
 ---
-
-## 4. Restart Keycloak (required)
-
-Restart Keycloak so the imported realm becomes active.
-
-If Keycloak runs as a StatefulSet:
-
-```bash
-kubectl rollout restart -n keycloak statefulset/keycloak
-```
-
-If Keycloak runs as a Deployment:
-
-```bash
-kubectl rollout restart -n keycloak deployment/keycloak
-```
-
-Wait until the pod is running again:
-
-```bash
-kubectl get pods -n keycloak
-```
-
----
-
-## 5. Verify the realm
-
-Open the Keycloak Admin Console and verify that the realm
-`group8-task5` exists.
-
-Typical URL (may differ depending on setup):
-
-```
-http://localhost:8080/admin
-```
-
----
-
-## Notes for Quarkus Services
-
-Quarkus services expect the following realm:
-
-```
-group8-task5
-```
-
-Example OIDC configuration used by the services:
-
-```properties
-quarkus.oidc.auth-server-url=http://keycloak.keycloak.svc.cluster.local:8080/realms/group8-task5
-```
-
-Ensure Keycloak is reachable via the Kubernetes service DNS name and not `localhost`.
-
----
-
-## Troubleshooting
-
-- Realm import fails:
-  - Ensure the realm name in the JSON matches exactly (`group8-task5`)
-  - Ensure Keycloak is not running in read-only mode
-- File not found:
-  - Re-run step 2 and verify `/tmp/group8-task5-realm-import.json`
-- Import succeeds but realm not visible:
-  - Ensure Keycloak was restarted after import
-
----
-
-End of guide.
-
-## Second one:
-
-import quarkus realm that is sinide quarkus.json
-
-1. Create/Update the Secret containing the realm export
-
-```
-kubectl -n keycloak create secret generic realm-import \
-  --from-file=quarkus.json=./quarkus.json \
-  --dry-run=client -o yaml | kubectl apply -f -
-```
-
-2. Create the KeycloakRealmImport that targets your Keycloak instance
-
-```
-kubectl apply -f - <<'YAML'
-apiVersion: k8s.keycloak.org/v2alpha1
-kind: KeycloakRealmImport
-metadata:
-  name: realm-import
-  namespace: keycloak
-spec:
-  keycloakCRName: keycloak
-  realm:
-    secretName: realm-import
-YAML
-```
-
-3. Watch import status
-
-```
-kubectl -n keycloak get keycloakrealmimports
-kubectl -n keycloak describe keycloakrealmimport realm-import
-```
-
-You want to see a success-ish Phase/Conditions (often done / Ready=True depending on operator version).
 
 ### exporting quarkus realm:
 
@@ -833,10 +728,10 @@ kubectl config set-context --current --namespace=keycloak
 # Export the realm to a file inside the pod
 
 ```
-kubectl exec -n keycloak keycloak-0 -- \
+kubectl exec -n keycloak keycloak-0 -- \                                                                           
   /opt/keycloak/bin/kc.sh export --optimized \
-  --realm group8-task5 \
-  --file /tmp/group8-task5-realm-import.json
+  --http-management-port=9002 \
+  --file /tmp/group8-task5-realm-import-new.json
 ```
 
 # Confirm it exists
