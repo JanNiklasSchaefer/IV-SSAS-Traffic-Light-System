@@ -1,0 +1,67 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: keycloak-tls
+  namespace: keycloak
+spec:
+  secretName: keycloak-tls-secret
+  issuerRef:
+    name: default-example-ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+  - keycloak.test
+  - keycloak-service.keycloak.svc.cluster.local
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: keycloak
+spec:
+  instances: 1
+  db:
+    vendor: postgres
+    host: postgres-db.keycloak.svc.cluster.local
+    usernameSecret:
+      name: postgres-secret
+      key: POSTGRES_USER
+    passwordSecret:
+      name: postgres-secret
+      key: POSTGRES_PASSWORD
+    database: keycloak
+  http:
+    httpEnabled: true
+  #   tlsSecret: keycloak-tls-secret
+  hostname:
+    hostname: https://keycloak.test/keycloak
+    strict: false
+    backchannelDynamic: true
+  proxy:
+    headers: xforwarded # double check your reverse proxy sets and overwrites the X-Forwarded-* headers
+  additionalOptions:
+    - name: https-trust-store-file
+#      value: /opt/keycloak/ca/root-certs.pem
+      value: /opt/keycloak/ca/bundle.p12
+    - name: https-trust-store-password
+      value: useless-pw
+    - name: https-trust-store-type
+#      value: PEM
+      value: PKCS12
+    - name: http-relative-path
+      value: /keycloak
+    - name: http-access-log-enabled
+      value: "true"
+    - name: log-level
+      value: debug
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - volumeMounts:
+            - name: cluster-root-ca
+              mountPath: /opt/keycloak/ca
+              readOnly: true
+        volumes:
+          - name: cluster-root-ca
+            configMap:
+              name: cluster-root-ca
