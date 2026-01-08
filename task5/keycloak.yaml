@@ -39,6 +39,9 @@ spec:
   proxy:
     headers: xforwarded # double check your reverse proxy sets and overwrites the X-Forwarded-* headers
   additionalOptions:
+  #implement automated import on restart
+    - name: import-realm 
+
     - name: https-trust-store-file
 #      value: /opt/keycloak/ca/root-certs.pem
       value: /opt/keycloak/ca/bundle.p12

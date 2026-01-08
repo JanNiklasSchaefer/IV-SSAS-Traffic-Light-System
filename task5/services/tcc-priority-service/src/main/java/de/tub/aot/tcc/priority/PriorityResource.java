@@ -1,5 +1,6 @@
 package de.tub.aot.tcc.priority;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -15,36 +16,37 @@ import java.util.UUID;
 @Path("/api/priority")
 @ApplicationScoped
 public class PriorityResource {
-    
+
     private Map<String, RequestStatus> requestStore = new HashMap<>();
-    
+
     @POST
     @Path("/requests")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
     public PriorityResponse createPriorityRequest(PriorityRequest request) {
         String requestId = UUID.randomUUID().toString();
         String status = "accepted";
-        
+
         RequestStatus requestStatus = new RequestStatus(requestId, "processing", request.getVehicleType());
         requestStore.put(requestId, requestStatus);
-        
+
         return new PriorityResponse(status, requestId);
     }
-    
+
     @GET
     @Path("/requests/{request_id}")
     @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian" })
     public RequestStatus getRequestStatus(@PathParam("request_id") String requestId) {
         RequestStatus status = requestStore.get(requestId);
-        
+
         if (status == null) {
             // Return a default status indicating not found
             // In a real implementation, you might want to throw a NotFoundException
             return new RequestStatus(requestId, "NOT_FOUND", null);
         }
-        
+
         return status;
     }
 }
-
