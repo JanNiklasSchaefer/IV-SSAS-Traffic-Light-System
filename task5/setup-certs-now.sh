@@ -1,6 +1,8 @@
 #!/bin/bash
-# Quick setup script for client certificates
+# Quick setup script for TLS certificates (Task 4)
+# Sets up truststore and mTLS certificates for clients
 # Run this: bash setup-certs-now.sh
+# Note: Used in both Task 4 (TLS) and Task 5 (OIDC over TLS)
 
 set -e
 
@@ -12,8 +14,9 @@ echo ""
 # Step 1: Extract CA certificate
 echo "Step 1: Extracting CA certificate..."
 mkdir -p certs
-kubectl -n cert-manager get secret ha1-gruppe8-krzysztoflagowski-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d > certs/ca.crt
-echo "✓ CA certificate extracted"
+# Use TCC ingress certificate as trust anchor (contains the correct CA chain)
+kubectl -n gruppe8-tcc get secret task4-gruppe8-tcc-ingress-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > certs/ca.crt
+echo "✓ TCC certificate extracted as trust anchor"
 
 # Step 2: Convert to PKCS12
 echo "Step 2: Converting CA to PKCS12..."
