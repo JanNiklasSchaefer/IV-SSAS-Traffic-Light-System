@@ -408,14 +408,14 @@ curl -v \
 > Content-Type: application/json
 > Accept: application/json
 > Content-Length: 15
-> 
+>
 < HTTP/1.1 308 Permanent Redirect
 < Date: Thu, 18 Dec 2025 02:06:27 GMT
 < Content-Type: text/html
 < Content-Length: 164
 < Connection: keep-alive
 < Location: https://tcc.test/api/time/validate
-< 
+<
 <html>
 <head><title>308 Permanent Redirect</title></head>
 <body>
@@ -521,8 +521,6 @@ All client-to-service communication is encrypted using TLS. The **Emergency Vehi
 - Backend to Priority Service: HTTPS with mTLS (reuses Emergency Vehicle Client certificate: `task5-gruppe8-emergency-vehicle-client-tls`)
 - Backend to Status Service: HTTPS
 
-
-
 ## UPDATE Cluster DNS so keycloak.test resolves internally makes mapping way easier
 
 Find your Keycloak service ClusterIP:
@@ -558,7 +556,7 @@ kubectl -n kube-system rollout restart deploy/coredns
 - ~~set up keycloak so its redeployable across systems~~
 - setup external client connection to public ingress url of keycloak
 - create yaml for all secrets so they are not plaintext
-- look at keycloak via https 
+- look at keycloak via https
 - check and implement for "interactive client" (see feedback last task)
 - unify role names (currently, some are service some are role. I fucked up here)
 - make all folders 1 to task5 i mean we have releases anyway and could convert back if we need.
@@ -566,22 +564,51 @@ kubectl -n kube-system rollout restart deploy/coredns
 zu klären wieso:
 
 # Time Service REST Client (internal service-to-service with mTLS)
+
 de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/url=https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443
 de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/trust-store=tls
 de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/key-store=tls
 
-in tcc.priority.services ist 
+in tcc.priority.services ist
 
+-FIX 500 error when calling priority service and we forward to endpoint. (currently commented out) some weird mtls / tls server/client bullshit bug
 
--FIX 500 error when calling priority service and we forward to endpoint. (currently commented out) some weird mtls / tls server/client bullshit bug 
+%prod.quarkus.rest-client.traffic-light-api.tls-configuration-name=http (irgendwie sowas hier halt wird der fix sein glaube ich, der handshake beim weiterleiten failed)
 
-%prod.quarkus.rest-client.traffic-light-api.tls-configuration-name=http  (irgendwie sowas hier halt wird der fix sein glaube ich, der handshake beim weiterleiten failed)
+# How to get access control running: update keycloak.yaml
 
+## Keycloak Admin UI Access
 
+### Option 1: DNS-based Access (Recommended)
 
-# How to get acces controll running: update keycloak.yaml 
+1. **Update CoreDNS for internal resolution:**
 
-change "hostname" entry to, keep everything else the same: 
+```bash
+# Find your Keycloak service ClusterIP:
+kubectl -n keycloak get svc keycloak-service -o wide
+
+# Patch CoreDNS ConfigMap to map keycloak.test → that IP:
+kubectl -n kube-system edit configmap coredns
+```
+
+Inside the Corefile, add a hosts block above forward:
+
+```
+hosts {
+  10.96.190.102 keycloak.test
+  fallthrough
+}
+```
+
+Restart CoreDNS:
+
+```bash
+kubectl -n kube-system rollout restart deploy/coredns
+```
+
+2. **Update Keycloak hostname configuration:**
+
+Change "hostname" entry to, keep everything else the same:
 
 ```
   hostname:
@@ -590,15 +617,35 @@ change "hostname" entry to, keep everything else the same:
     backchannelDynamic: true
 ```
 
-afterwards apply file with 
+Apply the updated configuration:
 
-```
+```bash
 kubectl apply -f keycloak.yaml -n keycloak
 ```
 
-applying the yaml should restart the keycloak instance with the new metadata set 
+3. **Access Keycloak Admin UI:**
+   - URL: `https://keycloak.test`
+   - Username: `temp-admin`
+   - Password: `923b2ce326014a22b99766c7c5ab98d2`
 
-# Importing the quarkus realm  I have got 2 guides by ai just try what works:
+### Option 2: Port Forwarding (Alternative)
+
+If DNS configuration doesn't work or you prefer direct access:
+
+```bash
+# Forward Keycloak port to localhost
+kubectl port-forward -n keycloak svc/keycloak-service 8080:80
+```
+
+Then access:
+
+- URL: `http://localhost:8080`
+- Username: `temp-admin`
+- Password: `923b2ce326014a22b99766c7c5ab98d2`
+
+**Note:** With port forwarding, use `http://` instead of `https://` and port `8080` instead of `443`.
+
+# Importing the quarkus realm I have got 2 guides by ai just try what works:
 
 ## first one:
 
@@ -738,12 +785,11 @@ Ensure Keycloak is reachable via the Kubernetes service DNS name and not `localh
 
 End of guide.
 
-
 ## Second one:
 
 import quarkus realm that is sinide quarkus.json
 
-1) Create/Update the Secret containing the realm export
+1. Create/Update the Secret containing the realm export
 
 ```
 kubectl -n keycloak create secret generic realm-import \
@@ -751,7 +797,7 @@ kubectl -n keycloak create secret generic realm-import \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-2) Create the KeycloakRealmImport that targets your Keycloak instance
+2. Create the KeycloakRealmImport that targets your Keycloak instance
 
 ```
 kubectl apply -f - <<'YAML'
@@ -767,7 +813,7 @@ spec:
 YAML
 ```
 
-3) Watch import status
+3. Watch import status
 
 ```
 kubectl -n keycloak get keycloakrealmimports
@@ -779,45 +825,51 @@ You want to see a success-ish Phase/Conditions (often done / Ready=True dependin
 ### exporting quarkus realm:
 
 # 1. Set the current namespace to keycloak
+
 ```
 kubectl config set-context --current --namespace=keycloak
 ```
+
 # Export the realm to a file inside the pod
+
 ```
 kubectl exec -n keycloak keycloak-0 -- \
   /opt/keycloak/bin/kc.sh export --optimized \
   --realm group8-task5 \
   --file /tmp/group8-task5-realm-import.json
 ```
+
 # Confirm it exists
+
 ```
 kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
 ```
+
 # Copy it out without kubectl cp (no tar needed)
+
 ```
 kubectl exec -n keycloak keycloak-0 -- cat /tmp/group8-task5-realm-import.json > group8-task5-realm-import.json
 ```
 
 ## Access Scheme:
 
-How to read it : 
+How to read it :
 
 Client -> Services it can use
 
-### DONE Connections 
-Tcc State controller  -> trafficLightDeviceService, audit-service
+### DONE Connections
 
-tcc  status service -> time service, trafficLightDeviceService
+Tcc State controller -> trafficLightDeviceService, audit-service
+
+tcc status service -> time service, trafficLightDeviceService
 
 tcc priority -> state controller, time service, audit-service, location validator
-
 
 #### fields to copy for clients
 
 # Setting up OIDC Client to get send requests to other services with access control
 
 application.properties:
-
 
 %prod.quarkus.oidc-client.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
 %prod.quarkus.oidc-client.client-id=tcc-state-controller
@@ -826,7 +878,6 @@ application.properties:
 
 #Set Client base url for api calls for different clients of service
 %prod.quarkus.rest-client.traffic-light-api.url=https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443
-
 
 and pom.xml:
 
@@ -839,12 +890,11 @@ and pom.xml:
          <artifactId>quarkus-rest-client-oidc-filter</artifactId>
       </dependency>
 
-
-#### fields to copy for services 
+#### fields to copy for services
 
 application.properties:
 
-#set oidc stuff 
+#set oidc stuff
 quarkus.oidc.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
 quarkus.oidc.discovery-enabled=true
 
@@ -864,9 +914,250 @@ and pom.xml:
 #### turn on debugging
 
 # TEMP debug logs
+
 quarkus.log.category."io.quarkus.oidc".level=DEBUG
 quarkus.log.category."io.quarkus.security".level=DEBUG
 
+---
 
+## Security Implementation Summary
 
+### ✅ Implemented Features
 
+#### 1. Security Policy for External Communication
+
+All microservices now implement OIDC-based authentication for external client requests:
+
+- **OIDC Token Validation**: All service endpoints validate incoming OIDC tokens from Keycloak
+- **Role-Based Access Control (RBAC)**: `@RolesAllowed` annotations are implemented on all service endpoints
+- **Service Configuration**: All services are configured with:
+  - `quarkus-oidc` dependency for token validation
+  - OIDC server configuration pointing to Keycloak realm
+  - Role claim path configuration for extracting roles from tokens
+
+**Implemented Services:**
+
+- ✅ `tcc-priority-service`: Endpoints protected with roles `emergency-vehicle`, `mayor-vehicle`, `other-vehicle`, `pedestrian`
+- ✅ `tcc-status-service`: Endpoints protected with roles `emergency-vehicle`, `mayor-vehicle`, `other-vehicle`, `pedestrian`
+- ✅ `tcc-state-controller`: Endpoints protected with role `tcc-priority-service-controll-service`
+- ✅ `tcc-audit-service`: Endpoints protected with roles `tcc-priority-service-audit-role`, `tcc-state-controller-audit-role`
+- ✅ `time-service`: Endpoints protected with service roles
+- ✅ `location-validator`: Endpoints protected with service roles
+- ✅ `traffic-light-device-service`: Endpoints protected with service roles
+
+**Example Configuration (application.properties):**
+
+```properties
+# OIDC Server Configuration for External Authentication
+quarkus.oidc.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
+quarkus.oidc.discovery-enabled=true
+quarkus.oidc.client-id=tcc-priority-service
+quarkus.oidc.application-type=service
+quarkus.oidc.roles.source=accesstoken
+quarkus.oidc.roles.role-claim-path=resource_access/tcc-priority-service/roles
+```
+
+**Example Endpoint Protection (Java):**
+
+```java
+@Path("/api/priority")
+@ApplicationScoped
+public class PriorityResource {
+
+    @POST
+    @Path("/requests")
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
+    public PriorityResponse createPriorityRequest(PriorityRequest request) {
+        // Implementation
+    }
+}
+```
+
+#### 2. Client-Secrets as Kubernetes Secrets
+
+All service client secrets are now stored in Kubernetes Secrets instead of plaintext in `application.properties`:
+
+**Implemented Services:**
+
+- ✅ `tcc-priority-service`: Secret `tcc-priority-service-secret`
+- ✅ `tcc-status-service`: Secret `tcc-status-service-secret`
+- ✅ `tcc-state-controller`: Secret `tcc-state-controller-secret`
+
+**Secret Configuration:**
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tcc-priority-service-secret
+  namespace: gruppe8-tcc
+type: Opaque
+data:
+  client-secret: <base64-encoded-secret>
+```
+
+**Application Configuration:**
+
+```properties
+# OIDC Client Secret from Kubernetes Secret
+%prod.quarkus.oidc-client.credentials.secret=${CLIENT_SECRET}
+```
+
+**Deployment Patch:**
+Since Quarkus doesn't support direct `secretKeyRef` syntax in application.properties, environment variables are added via Kubernetes patch manifests:
+
+```bash
+kubectl patch deployment gruppe8-tcc-priority-service -n gruppe8-tcc \
+  --type='json' \
+  -p='[{"op": "add", "path": "/spec/template/spec/containers/0/env/-", "value": {"name": "CLIENT_SECRET", "valueFrom": {"secretKeyRef": {"name": "tcc-priority-service-secret", "key": "client-secret"}}}}]'
+```
+
+Patch manifests are available in `kubernetes/secrets/`:
+
+- `tcc-priority-service-env-patch.yaml`
+- `tcc-status-service-env-patch.yaml`
+- `tcc-state-controller-env-patch.yaml`
+
+#### External Testing (from your local machine)
+
+**Prerequisites:**
+
+- Ingress is deployed (`kubernetes/ingress.yaml`)
+- Certificates have been extracted: `./setup-certs-now.sh` executed
+- `/etc/hosts` contains `127.0.0.1 tcc.test`
+- Keycloak realm `group8-task5` is imported and clients are present
+
+**1. Standard TLS Clients (Mayor, Other, Pedestrian):**
+
+```bash
+cd clients/mayor-vehicle-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
+```
+
+Similarly for:
+
+```bash
+cd clients/other-vehicle-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
+
+cd clients/pedestrian-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
+```
+
+**2. mTLS Client (Emergency Vehicle):**
+
+```bash
+cd clients/emergency-vehicle-client
+mvn quarkus:dev -Dbase.url=https://tcc.test
+```
+
+**3. Optional: Direct curl test via Ingress (without clients):**
+
+```bash
+# Get token from Keycloak Ingress
+TOKEN=$(curl -s \
+  -d grant_type=client_credentials \
+  -d client_id=emergency-vehicle-client \
+  -d client_secret=<secret> \
+  https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+# Call Priority Service via Ingress
+curl -v -X POST \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"vehicleType":"emergency"}' \
+  "https://tcc.test/api/priority/requests"
+```
+
+This clearly separates which commands work **inside the cluster** and which work **from outside** (local machine via Ingress).
+
+#### 3. Internal Security Policy (Service-to-Service Authentication)
+
+Already implemented in previous tasks:
+
+- ✅ mTLS for service-to-service communication
+- ✅ OIDC client credentials flow for service-to-service calls
+- ✅ Role-based access control for internal service endpoints
+
+### Security Policy Documentation
+
+#### External Access Policy
+
+**Principle**: All external client requests must be authenticated using OIDC tokens issued by Keycloak.
+
+**Authentication Flow:**
+
+1. Client authenticates with Keycloak using client credentials or user credentials
+2. Keycloak issues an OIDC access token containing client roles
+3. Client includes token in `Authorization: Bearer <token>` header
+4. Service validates token with Keycloak
+5. Service extracts roles from token and checks against `@RolesAllowed` annotations
+6. Request is allowed or denied based on role membership
+
+**Role Mapping:**
+
+- Client roles are stored in Keycloak realm under `resource_access/<service-name>/roles`
+- Services extract roles using `quarkus.oidc.roles.role-claim-path=resource_access/<service-name>/roles`
+- Roles are matched against `@RolesAllowed` annotations on endpoints
+
+**Example Role Structure in Keycloak:**
+
+```
+Realm: group8-task5
+  Client: tcc-priority-service
+    Roles:
+      - emergency-vehicle
+      - mayor-vehicle
+      - other-vehicle
+      - pedestrian
+```
+
+#### Internal Access Policy
+
+**Principle**: Service-to-service communication uses mTLS + OIDC client credentials.
+
+**Authentication Flow:**
+
+1. Service authenticates with Keycloak using client credentials (stored in Kubernetes Secret)
+2. Keycloak issues OIDC access token for service
+3. Service includes token in `Authorization: Bearer <token>` header when calling other services
+4. Target service validates token and checks service roles
+5. Communication is secured with mTLS (mutual TLS)
+
+### Testing Security Implementation
+
+#### Internal Tests (from inside the cluster)
+
+Jan bitte ausfüllen danke :D
+
+### Deployment Checklist
+
+When deploying services with OIDC authentication:
+
+1. ✅ Ensure Keycloak realm is configured with clients and roles
+2. ✅ Create Kubernetes Secrets for client secrets
+3. ✅ Apply patch manifests to add `CLIENT_SECRET` environment variable
+4. ✅ Verify services start with `oidc` and `security` in installed features
+5. ✅ Test endpoints return 403 without token
+6. ✅ Test endpoints return 200 with valid token and correct role
+
+### Files Modified/Created
+
+**Modified:**
+
+- All service `pom.xml` files: Added `quarkus-oidc` dependency
+- All service `application.properties`: Added OIDC server configuration
+- Service Java files: Added `@RolesAllowed` annotations
+
+**Created:**
+
+- `kubernetes/secrets/tcc-priority-service-secret.yaml`
+- `kubernetes/secrets/tcc-status-service-secret.yaml`
+- `kubernetes/secrets/tcc-state-controller-secret.yaml`
+- `kubernetes/secrets/tcc-priority-service-env-patch.yaml`
+- `kubernetes/secrets/tcc-status-service-env-patch.yaml`
+- `kubernetes/secrets/tcc-state-controller-env-patch.yaml`
