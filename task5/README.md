@@ -919,7 +919,7 @@ Patch manifests are available in `kubernetes/secrets/`:
 
 - Ingress is deployed (`kubernetes/ingress.yaml`)
 - Certificates have been extracted: `./setup-certs-now.sh` executed
-- `/etc/hosts` contains `127.0.0.1 tcc.test`
+- `/etc/hosts` contains `127.0.0.1 tcc.test` or port forwarding from above example
 - Keycloak realm `group8-task5` is imported and clients are present
 
 **1. Standard TLS Clients (Mayor, Other, Pedestrian):**
