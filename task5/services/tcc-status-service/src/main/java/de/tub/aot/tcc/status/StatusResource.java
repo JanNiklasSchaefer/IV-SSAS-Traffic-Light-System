@@ -1,5 +1,6 @@
 package de.tub.aot.tcc.status;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -14,6 +15,7 @@ public class StatusResource {
     @GET
     @Path("/traffic")
     @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian" })
     public TrafficStatus getTrafficStatus(@QueryParam("vehicle") Boolean vehicle) {
         TrafficStatus status = new TrafficStatus();
         status.setState("green");
