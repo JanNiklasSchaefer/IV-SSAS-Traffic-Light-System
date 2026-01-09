@@ -31,7 +31,7 @@ spec:
     database: keycloak
   http:
     httpEnabled: true
-  #   tlsSecret: keycloak-tls-secret
+    tlsSecret: keycloak-tls-secret
   hostname:
     hostname: https://keycloak.test/keycloak
     strict: false

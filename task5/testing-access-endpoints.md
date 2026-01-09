@@ -47,11 +47,14 @@ kubectl -n gruppe8-testing exec -it tls-debug -- sh
 ## 3️⃣ Token: tcc-state-controller
 
 ```bash
-TOKEN=$(curl -s \
+TOKEN=$(curl -vk \
+  --cacert /etc/tls/ca.crt \
+  --cert /etc/tls/tls.crt \
+  --key /etc/tls/tls.key \
   -d grant_type=client_credentials \
   -d client_id=tcc-state-controller \
   -d client_secret=MEb3nfjgTGkEHiZs8NugXxKTf2UqHdVC \
-  http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  https://keycloak-service.keycloak.svc.cluster.local:8443/keycloak/realms/group8-task5/protocol/openid-connect/token \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 echo "LEN=${#TOKEN}"
@@ -108,7 +111,7 @@ TOKEN=$(curl -s \
   -d grant_type=client_credentials \
   -d client_id=tcc-status-service \
   -d client_secret=u7dV5aMSxMpRrGL2BezDnMf1uQFIULkQ \
-  http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  https://keycloak-service.keycloak.svc.cluster.local:8443/keycloak/realms/group8-task5/protocol/openid-connect/token \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 echo "LEN=${#TOKEN}"
@@ -149,7 +152,7 @@ TOKEN=$(curl -s \
   -d grant_type=client_credentials \
   -d client_id=tcc-priority-service \
   -d client_secret=ORzb7Qc6FxG82m1GJjDTwPZmcmwNtPJb \
-  http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  https://keycloak-service.keycloak.svc.cluster.local:8443/keycloak/realms/group8-task5/protocol/openid-connect/token \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 echo "LEN=${#TOKEN}"
@@ -236,3 +239,8 @@ curl -v -X POST \
 ```bash
 kubectl delete pod tls-debug -n gruppe8-testing
 ```
+curl -vk \
+  -d grant_type=client_credentials \
+  -d client_id=pedestrian-client \
+  -d client_secret=yJCbekK05ZP5tfaSvmBJzqbvetVa7ryT \
+  http://localhost:8080/keycloak/realms/group8-task5/protocol/openid-connect/token
