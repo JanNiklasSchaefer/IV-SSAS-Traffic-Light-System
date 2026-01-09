@@ -98,8 +98,16 @@ public class OtherVehicleClient implements QuarkusApplication {
             System.out.println("Request ID: " + status.getRequestId());
             System.out.println("Status: " + status.getStatus());
             System.out.println("Vehicle Type: " + status.getVehicleType());
+        } catch (jakarta.ws.rs.WebApplicationException e) {
+            if (e.getResponse() != null && e.getResponse().getStatus() == 403) {
+                System.out.println(
+                        "Status: 403 Forbidden (expected - other-vehicle does not have permission for priority requests)");
+            } else {
+                System.err.println("Error calling priority request endpoint: " + e.getMessage());
+                throw e;
+            }
         } catch (Exception e) {
-            System.err.println("Error calling request status endpoint: " + e.getMessage());
+            System.err.println("Error calling priority request endpoint: " + e.getMessage());
             throw e;
         }
     }
