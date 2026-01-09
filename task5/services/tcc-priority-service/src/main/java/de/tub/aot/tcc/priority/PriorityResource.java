@@ -37,7 +37,7 @@ public class PriorityResource {
     @GET
     @Path("/requests/{request_id}")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian" })
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
     public RequestStatus getRequestStatus(@PathParam("request_id") String requestId) {
         RequestStatus status = requestStore.get(requestId);
 

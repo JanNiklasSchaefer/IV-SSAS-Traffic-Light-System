@@ -18,10 +18,19 @@ mkdir -p certs
 kubectl -n gruppe8-tcc get secret task4-gruppe8-tcc-ingress-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > certs/ca.crt
 echo "✓ TCC certificate extracted as trust anchor"
 
+#Extract Keycloak Secret into trust anchor 
+kubectl -n keycloak get secret keycloak-tls-secret -o jsonpath='{.data.tls\.crt}' | base64 -d > certs/ca_keycloak.crt
+echo "✓ keycloak certificate extracted as trust anchor"
+
+
 # Step 2: Convert to PKCS12
 echo "Step 2: Converting CA to PKCS12..."
 # Remove old keystore if it exists (keytool doesn't overwrite properly)
 rm -f certs/ca.p12
+
+# Import keycloak cert into trust_store
+keytool -importcert -alias ca_keycloak -file keycloak_cert/ca.crt -keystore certs/ca.p12 -storepass changeit -storetype PKCS12 -noprompt
+
 # Use keytool to import CA certificate into PKCS12 truststore (Java-compatible)
 keytool -importcert -alias ca -file certs/ca.crt -keystore certs/ca.p12 -storepass changeit -storetype PKCS12 -noprompt
 echo "✓ CA converted to PKCS12"

@@ -9,6 +9,7 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import java.util.Scanner;
 
 /**
  * Simple demo client for a generic Other Vehicle.
@@ -33,27 +34,89 @@ public class OtherVehicleClient implements QuarkusApplication {
     TccApiClient apiClient;
 
     @Override
-    public int run(String... args) throws Exception {
-        runDemo();
+    public int run(String... args) {
+        System.out.println("=== Pedestrian Client ===");
+        runInteractive();
         return 0;
+    }
+
+    private void runInteractive() {
+        try (Scanner scanner = new Scanner(System.in)) {
+            boolean running = true;
+
+            while (running) {
+                printMenu();
+                System.out.print("> ");
+                String line = scanner.nextLine().trim();
+
+                if (line.isEmpty()) {
+                    continue;
+                }
+
+                String[] parts = line.split("\\s+");
+                String command = parts[0];
+
+                try {
+                    switch (command) {
+                        case "1" -> {
+                            if (parts.length != 2) {
+                                System.out.println("ERROR: Missing Vehicle Boolean Input or too many Input Parameters. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
+                            }
+                            else if((!parts[1].equals("true") && !parts[1].equals("false"))){
+                                System.out.println(parts[1]);
+                                System.out.println("ERROR: Wrong Vehicle Boolean Input value. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
+                            }
+                            else {
+                                callTrafficStatusEndpoint(Boolean.valueOf(parts[1]));
+                            }
+                        }
+                        case "2" -> callPriorityRequestEndpoint();
+                        case "3" -> {
+                            if (parts.length != 2) {
+                                System.out.println("ERROR: Wrong Input. Correct Pattern: 3 <requestId>. Example Call: \n> 3 123e4567-e89b-12d3-a456-426614174000");
+                            } else {
+                                callRequestStatusEndpoint(parts[1]);
+                            }
+                        }
+                        case "4" -> runDemo();
+                        case "q", "quit", "exit" -> running = false;
+                        default -> System.out.println("Unknown command: " + command);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Call failed: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    private void printMenu() {
+    System.out.println("""
+            
+            === Menu ===
+            1 <Boolean>        → GET  /api/status/traffic?vehicle={Boolean}
+            2                  → POST /api/priority/requests  
+            3 <requestId>      → GET  /api/priority/requests/{requestId}
+            4                  → Run a demo of all endpoints with dummy data. 
+            q                  → Quit
+            """);
     }
 
     private void runDemo() throws Exception {
         System.out.println("=== Other Vehicle Client ===");
         System.out.println("Using Quarkus REST Client");
 
-        callTrafficStatusEndpoint();
+        callTrafficStatusEndpoint(true);
         callPriorityRequestEndpoint();
-        callRequestStatusEndpoint();
+        callRequestStatusEndpoint(DUMMY_REQUEST_ID);
 
         System.out.println("=== Demo finished ===");
     }
 
-    private void callTrafficStatusEndpoint() throws Exception {
-        System.out.println("\n--- GET /api/status/traffic?vehicle=true ---");
+    private void callTrafficStatusEndpoint(Boolean vehicle) throws Exception {
+        System.out.println("\n--- GET /api/status/traffic?vehicle=" + vehicle + "---");
 
         try {
-            TrafficStatus status = apiClient.getTrafficStatus(true);
+            TrafficStatus status = apiClient.getTrafficStatus(vehicle);
             System.out.println("Status: 200 OK");
             System.out.println("State: " + status.getState());
             System.out.println("Timestamp: " + status.getTimestamp());
@@ -88,18 +151,26 @@ public class OtherVehicleClient implements QuarkusApplication {
         }
     }
 
-    private void callRequestStatusEndpoint() throws Exception {
+    private void callRequestStatusEndpoint(String request_id) throws Exception {
         System.out.println("\n--- GET /api/priority/requests/{requestId} ---");
-        System.out.println("Using dummy requestId: " + DUMMY_REQUEST_ID);
+        System.out.println("Using requestId: " + request_id);
 
         try {
-            RequestStatus status = apiClient.getRequestStatus(DUMMY_REQUEST_ID);
+            RequestStatus status = apiClient.getRequestStatus(request_id);
             System.out.println("Status: 200 OK");
             System.out.println("Request ID: " + status.getRequestId());
             System.out.println("Status: " + status.getStatus());
             System.out.println("Vehicle Type: " + status.getVehicleType());
+        } catch (jakarta.ws.rs.WebApplicationException e) {
+            if (e.getResponse() != null && e.getResponse().getStatus() == 403) {
+                System.out.println(
+                        "Status: 403 Forbidden (expected - other-vehicle does not have permission for priority requests)");
+            } else {
+                System.err.println("Error calling priority request endpoint: " + e.getMessage());
+                throw e;
+            }
         } catch (Exception e) {
-            System.err.println("Error calling request status endpoint: " + e.getMessage());
+            System.err.println("Error calling priority request endpoint: " + e.getMessage());
             throw e;
         }
     }

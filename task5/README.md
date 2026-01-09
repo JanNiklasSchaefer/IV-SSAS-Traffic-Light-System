@@ -804,3 +804,30 @@ When deploying services with OIDC authentication:
 - `kubernetes/secrets/tcc-priority-service-env-patch.yaml`
 - `kubernetes/secrets/tcc-status-service-env-patch.yaml`
 - `kubernetes/secrets/tcc-state-controller-env-patch.yaml`
+
+
+### starting interactive client
+
+Swap into directory 
+
+then : 
+
+```
+mvn clean package
+
+java -Dbase.url=https://tcc.test -jar target/quarkus-app/quarkus-run.jar
+```
+
+This opens an interactive Quarkus Client, from which the public API Endpoints can be called. You are presented 5 Options:
+
+```
+=== Menu ===
+1 <Boolean>        → GET  /api/status/traffic?vehicle=false
+2                  → POST /api/priority/requests   (pedestrian)
+3 <requestId>      → GET  /api/priority/requests/{requestId}
+4                  → Run a demo of all endpoints with dummy data.
+q                  → Quit
+
+```
+
+The first 3 are manual calls to the endpoints with the possibility to input the parameters. The 4th option is a demo run to make testing the clients easier. The 5th option "q" shuts off the client. 
