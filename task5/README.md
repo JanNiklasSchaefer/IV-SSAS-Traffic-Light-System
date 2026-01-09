@@ -806,15 +806,28 @@ When deploying services with OIDC authentication:
 - `kubernetes/secrets/tcc-state-controller-env-patch.yaml`
 
 
-# TODO:
+### starting interactive client
 
-## fix this shouldn't be 200 for other-vehicle-client:
+Swap into directory 
 
---- GET /api/priority/requests/{requestId} ---
-Using dummy requestId: 123e4567-e89b-12d3-a456-426614174000
-Status: 200 OK
-Request ID: 123e4567-e89b-12d3-a456-426614174000
-Status: NOT_FOUND
-Vehicle Type: null
-=== Demo finished ===
-2026-01-09 14:45:43,768 INFO  [io.quarkus] (Quarkus Main Thread) gruppe8-other-vehicle-client stopped in 0.005s
+then : 
+
+```
+mvn clean package
+
+java -Dbase.url=https://tcc.test -jar target/quarkus-app/quarkus-run.jar
+```
+
+This opens an interactive Quarkus Client, from which the public API Endpoints can be called. You are presented 5 Options:
+
+```
+=== Menu ===
+1 <Boolean>        → GET  /api/status/traffic?vehicle=false
+2                  → POST /api/priority/requests   (pedestrian)
+3 <requestId>      → GET  /api/priority/requests/{requestId}
+4                  → Run a demo of all endpoints with dummy data.
+q                  → Quit
+
+```
+
+The first 3 are manual calls to the endpoints with the possibility to input the parameters. The 4th option is a demo run to make testing the clients easier. The 5th option "q" shuts off the client. 
