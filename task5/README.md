@@ -177,10 +177,6 @@ kubectl get services -A | grep gruppe8
 kubectl get ingress -n gruppe8-tcc
 ```
 
-# Setting up External and Internal TLS
-
-## Internal TLS
-
 **Service-to-Service Endpoints**
 
 Services communicate across namespaces using Kubernetes Service Discovery:
@@ -196,88 +192,6 @@ Traffic on the service port 443 is HTTPS-only, plain HTTP will be denied. The ma
 All communication between pods additionally requires HTTPS due to the network policies.
 
 Overall this ensures that all communication inside the cluster is done encrypted. This prevents adversaries from listening to the network or trying to access the network via HTTP. An Adversary would need to break the authentication or get a copy of a secret in order to access any data inside the cluster.
-
-#### Creating a Test Pod:
-
-In order to test internal TLS we must call the Services from inside the cluster. A testing namespace and certificate must be created and then a testing pod can be used to test all the endpoints.
-
-It is assumed directory $/task5/ is open.
-
-**Step 1** Create a namespace and apply the certificate:
-
-```
-kubectl apply -f kubernetes/testing-pod/
-```
-
-**Step 2** Ceate a Test Pod with the testing certificate mounted inside the testing namespace.
-
-```
-# Create Testing Pod with name tls-debug
-kubectl -n gruppe8-testing run tls-debug \
-  --image=curlimages/curl:8.5.0 \
-  --restart=Never \
-  --overrides='
-{
-  "spec": {
-    "containers": [{
-      "name": "curl",
-      "image": "curlimages/curl:8.5.0",
-      "command": ["sh","-c","sleep 3600"],
-      "stdin": true,
-      "tty": true,
-      "volumeMounts": [
-        {"name":"certs","mountPath":"/certs","readOnly":true}
-      ]
-    }],
-    "volumes": [
-      {"name":"certs","secret":{"secretName":"gruppe8-task4-testing-cert-tls"}}
-    ]
-  }
-}'
-```
-
-**Step 3** Open a shell inside the testing pod:
-
-```
-kubectl -n gruppe8-testing exec -it tls-debug -- sh
-```
-
-**Note** If the pod stays open for a longer time, the pod might become completed. In that case simply delete the pod and repeat Step 2 to create a new testing pod:
-
-```
-kubectl delete pod tls-debug -n gruppe8-testing
-```
-
-**Step 4** Test the endpoints and verify HTTPS is working. Example Calls for all Services can be found in /task5/endpoint-calls.md. One example of those is:
-
-```
-curl -v \
-  --cacert /certs/ca.crt \
-  --cert /certs/tls.crt \
-  --key /certs/tls.key \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"timestamp":1}' \
-  "https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
-```
-
-The same endpoint with HTTP will not work, showing that TLS is required:
-
-```
-curl -v \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"timestamp":1}' \
-  "http://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
-```
-
-**Note** Most Endpoints still have hard coded answers, functionality will be added in a later task.
-
-## External TLS
-
-**Why External TLS?** Clients running outside the Kubernetes cluster need to authenticate and encrypt their communication with the services. This setup enables TLS encryption for client-to-service communication, with mTLS specifically for the Emergency Vehicle Client.
-
-**How External TLS works:**
 
 **Client-to-Service Endpoints:**
 
@@ -476,87 +390,16 @@ mvn quarkus:dev -Dbase.url=https://tcc.test
 
 **Note:** Port-forwarding only allows access to one service at a time. Ingress (recommended) allows access to all services via a single hostname.
 
-## TLS Configuration
-
-All client-to-service communication is encrypted using TLS. The **Emergency Vehicle Client** uses **mutual TLS (mTLS)** when communicating with the **Priority Service**.
-
-### Architecture Decisions
-
-**TLS for Client-to-Service Communication:**
-
-- **Decision:** TLS is enabled for all microservices that are accessed by clients (Priority Service, Status Service). Service-to-service communication within the cluster uses HTTPS with mutual TLS (mTLS) encryption.
-- **Rationale:** Ensures end-to-end encryption from clients through the Ingress to the services. Service-to-service communication is secured at the application level using mTLS.
-- **Implementation:** Services use TLS certificates issued by cert-manager, mounted as Kubernetes secrets, for both client-facing and internal service-to-service communication.
-
-**Mutual TLS (mTLS):**
-
-- **Decision:** mTLS is implemented between the Emergency Vehicle Client and the Priority Service.
-- **Rationale:** Emergency vehicles require higher security due to their critical nature. mTLS provides mutual authentication, ensuring both client and server verify each other's identity.
-- **Implementation:**
-  - Priority Service requires client certificates (`quarkus.http.ssl.client-auth=required`)
-  - Emergency Vehicle Client presents its client certificate during TLS handshake
-  - Ingress Controller reuses the Emergency Vehicle Client certificate when forwarding requests to the Priority Service (both are client auth certificates)
-
-**Health Checks:**
-
-- **Decision:** Health checks run on a separate management port (9000) with HTTPS but without mTLS.
-- **Rationale:** Kubernetes health checks cannot provide client certificates. Using a separate HTTPS port for health checks allows the service to remain healthy while enforcing mTLS on the main API port (8443).
-- **Implementation:** Quarkus Management Interface enabled on port 9000 for health checks.
-
-### Technical Details
-
-**Service Configuration:**
-
-- **Priority Service:**
-  - API port: 8443 (HTTPS with mTLS, `client-auth=required`)
-  - Management port: 9000 (HTTPS, for health checks)
-  - Trust store: `/etc/certs/trust/root-certs.pem` (CA bundle from trust-manager)
-- **Status Service:**
-  - API port: 8443 (HTTPS, standard TLS)
-  - No mTLS required
-
-**Ingress Configuration:**
-
-- Client-facing: HTTPS on port 443 (certificate: `task5-gruppe8-tcc-ingress-tls`)
-- Backend to Priority Service: HTTPS with mTLS (reuses Emergency Vehicle Client certificate: `task5-gruppe8-emergency-vehicle-client-tls`)
-- Backend to Status Service: HTTPS
-
-## UPDATE Cluster DNS so keycloak.test resolves internally makes mapping way easier
-
-Find your Keycloak service ClusterIP:
-
-```
-kubectl -n keycloak get svc keycloak-service -o wide
-```
-
-Patch CoreDNS ConfigMap to map keycloak.test → that IP. (This opens a vim instance of the file to edit)
-
-```
-kubectl -n kube-system edit configmap coredns
-```
-
-Inside the Corefile, add a hosts block above forward:
-
-```
-hosts {
-  10.96.190.102 keycloak.test
-  fallthrough
-}
-```
-
-Restart CoreDNS:
-
-```
-kubectl -n kube-system rollout restart deploy/coredns
-```
 
 # TODO'S (ranked after priority somewhat)
 
 - ~~keycloak service to service for all services~~
 - ~~set up keycloak so its redeployable across systems~~
-- setup external client connection to public ingress url of keycloak
-- create yaml for all secrets so they are not plaintext
-- look at keycloak via https
+- ~~setup external client connection to public ingress url of keycloak~~
+- ~~create yaml for all secrets so they are not plaintext~~
+- save client-secrets for external secrets not as plaintext
+- ~~look at keycloak via https~~
+- look at keycloak via https for external clients
 - check and implement for "interactive client" (see feedback last task)
 - unify role names (currently, some are service some are role. I fucked up here)
 - make all folders 1 to task5 i mean we have releases anyway and could convert back if we need.
@@ -579,43 +422,7 @@ in tcc.priority.services ist
 
 ## Keycloak Admin UI Access
 
-### Option 1: DNS-based Access (Recommended)
-
-1. **Update CoreDNS for internal resolution:**
-
-```bash
-# Find your Keycloak service ClusterIP:
-kubectl -n keycloak get svc keycloak-service -o wide
-
-# Patch CoreDNS ConfigMap to map keycloak.test → that IP:V
-kubectl -n kube-system edit configmap coredns
-```
-
-Inside the Corefile, add a hosts block above forward:
-
-```
-hosts {
-  10.96.190.102 keycloak.test
-  fallthrough
-}
-```
-
-Restart CoreDNS:
-
-```bash
-kubectl -n kube-system rollout restart deploy/coredns
-```
-
-2. **Update Keycloak hostname configuration:**
-
-Change "hostname" entry to, keep everything else the same:
-
-```
-  hostname:
-    hostname: https://keycloak.test/keycloak
-    strict: false
-    backchannelDynamic: true
-```
+1. **Update Keycloak:**
 
 Apply the updated configuration:
 
@@ -623,7 +430,7 @@ Apply the updated configuration:
 kubectl apply -f keycloak.yaml -n keycloak
 ```
 
-3. **Access Keycloak Admin UI:**
+2. **Access Keycloak Admin UI:**
    - URL: `https://keycloak.test`
    - Username: `temp-admin`
    - Password: `923b2ce326014a22b99766c7c5ab98d2`
@@ -644,10 +451,6 @@ Then access:
 - Password: `923b2ce326014a22b99766c7c5ab98d2`
 
 **Note:** With port forwarding, use `http://` instead of `https://` and port `8080` instead of `443`.
-
-# Importing the quarkus realm I have got 2 guides by ai just try what works:
-
-## first one:
 
 # Importing the `group8-task5` Keycloak Realm (Instructor Guide)
 
@@ -759,61 +562,6 @@ Tcc State controller -> trafficLightDeviceService, audit-service
 tcc status service -> time service, trafficLightDeviceService
 
 tcc priority -> state controller, time service, audit-service, location validator
-
-#### fields to copy for clients
-
-# Setting up OIDC Client to get send requests to other services with access control
-
-application.properties:
-
-%prod.quarkus.oidc-client.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
-%prod.quarkus.oidc-client.client-id=tcc-state-controller
-%prod.quarkus.oidc-client.credentials.secret=MEb3nfjgTGkEHiZs8NugXxKTf2UqHdVC
-%prod.quarkus.oidc-client.grant.type=client
-
-#Set Client base url for api calls for different clients of service
-%prod.quarkus.rest-client.traffic-light-api.url=https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443
-
-and pom.xml:
-
-      <dependency>
-         <groupId>io.quarkus</groupId>
-         <artifactId>quarkus-oidc-client</artifactId>
-      </dependency>
-      <dependency>
-         <groupId>io.quarkus</groupId>
-         <artifactId>quarkus-rest-client-oidc-filter</artifactId>
-      </dependency>
-
-#### fields to copy for services
-
-application.properties:
-
-#set oidc stuff
-quarkus.oidc.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
-quarkus.oidc.discovery-enabled=true
-
-quarkus.oidc.application-type=service
-
-quarkus.oidc.roles.role-claim-path=resource_access/traffic-light-device/roles
-
-quarkus.oidc.roles.source=accesstoken
-
-and pom.xml:
-
-      <dependency>
-         <groupId>io.quarkus</groupId>
-         <artifactId>quarkus-oidc</artifactId>
-      </dependency>
-
-#### turn on debugging
-
-# TEMP debug logs
-
-quarkus.log.category."io.quarkus.oidc".level=DEBUG
-quarkus.log.category."io.quarkus.security".level=DEBUG
-
----
 
 ## Security Implementation Summary
 
