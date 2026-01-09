@@ -5,10 +5,16 @@ metadata:
   name: keycloak-tls
   namespace: keycloak
 spec:
+  isCA: false
   secretName: keycloak-tls-secret
   issuerRef:
-    name: default-example-ca-issuer
+    name: ha1-gruppe8-krzysztoflagowski-clusterissuer 
     kind: ClusterIssuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  usages:
+    - server auth
   dnsNames:
   - keycloak.test
   - keycloak-service.keycloak.svc.cluster.local
