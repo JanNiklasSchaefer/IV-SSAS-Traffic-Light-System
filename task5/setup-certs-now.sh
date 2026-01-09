@@ -29,7 +29,7 @@ echo "Step 2: Converting CA to PKCS12..."
 rm -f certs/ca.p12
 
 # Import keycloak cert into trust_store
-keytool -importcert -alias ca_keycloak -file keycloak_cert/ca.crt -keystore certs/ca.p12 -storepass changeit -storetype PKCS12 -noprompt
+keytool -importcert -alias ca_keycloak -file certs/ca_keycloak.crt -keystore certs/ca.p12 -storepass changeit -storetype PKCS12 -noprompt
 
 # Use keytool to import CA certificate into PKCS12 truststore (Java-compatible)
 keytool -importcert -alias ca -file certs/ca.crt -keystore certs/ca.p12 -storepass changeit -storetype PKCS12 -noprompt
