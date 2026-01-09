@@ -804,3 +804,17 @@ When deploying services with OIDC authentication:
 - `kubernetes/secrets/tcc-priority-service-env-patch.yaml`
 - `kubernetes/secrets/tcc-status-service-env-patch.yaml`
 - `kubernetes/secrets/tcc-state-controller-env-patch.yaml`
+
+
+# TODO:
+
+## fix this shouldn't be 200 for other-vehicle-client:
+
+--- GET /api/priority/requests/{requestId} ---
+Using dummy requestId: 123e4567-e89b-12d3-a456-426614174000
+Status: 200 OK
+Request ID: 123e4567-e89b-12d3-a456-426614174000
+Status: NOT_FOUND
+Vehicle Type: null
+=== Demo finished ===
+2026-01-09 14:45:43,768 INFO  [io.quarkus] (Quarkus Main Thread) gruppe8-other-vehicle-client stopped in 0.005s

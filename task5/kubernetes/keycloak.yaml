@@ -7,9 +7,15 @@ metadata:
 spec:
   isCA: false
   secretName: keycloak-tls-secret
+  subject:
+    organizations:
+      - Gruppe 8
+    organizationalUnits:
+      - Task 4
   issuerRef:
     name: ha1-gruppe8-krzysztoflagowski-clusterissuer 
     kind: ClusterIssuer
+    group: cert-manager.io
   privateKey:
     algorithm: ECDSA
     size: 256
