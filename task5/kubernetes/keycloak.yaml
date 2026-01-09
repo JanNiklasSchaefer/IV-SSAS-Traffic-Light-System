@@ -42,7 +42,7 @@ spec:
       key: POSTGRES_PASSWORD
     database: keycloak
   http:
-    httpEnabled: true
+    httpEnabled: false
     tlsSecret: keycloak-tls-secret
   hostname:
     hostname: https://keycloak.test/keycloak
