@@ -1,9 +1,5 @@
 ## Task 5 – Access Controll
 
-### Overview
-
-Task 4 focuses Access Controll
-
 ### Repository Layout
 
 ```
@@ -18,33 +14,59 @@ task5/
 │   └── location-validator/           # → gruppe8-shared-services namespace
 ├── clients/                 # Client apps hitting the REST endpoints (TLS enabled)
 │   ├── emergency-vehicle-client/     # (mTLS enabled)
+│   │   └── run.sh
 │   ├── mayor-vehicle-client/
+│   │   └── run.sh
 │   ├── other-vehicle-client/
-│   └── pedestrian-client/
+│   │   └── run.sh
+│   ├── pedestrian-client/
+│   │   └── run.sh
+│   └── .env.example                  # Template for client secrets (copy to .env)
 ├── kubernetes/              # Kubernetes deployment manifests
 │   ├── ingress.yaml         # Manual Ingress configuration (TLS enabled)
+│   ├── keycloak.yaml        # Keycloak deployment with TLS configuration
 │   ├── certificates/        # Certificate manifests for TLS
 │   │   ├── tcc-priority-service-certificate.yaml
 │   │   ├── tcc-status-service-certificate.yaml
+│   │   ├── tcc-state-controller-certificate.yaml
+│   │   ├── tcc-audit-service-certificate.yaml
 │   │   ├── tcc-ingress-certificate.yaml
-│   │   └── emergency-vehicle-client-certificate.yaml
+│   │   ├── emergency-vehicle-client-certificate.yaml
+│   │   ├── traffic-light-device-certificate.yaml
+│   │   ├── shared-time-service-certificate.yaml
+│   │   └── shared-location-validator-certificate.yaml
+│   ├── secrets/             # Kubernetes Secrets for service client secrets
+│   │   ├── tcc-priority-service-secret.yaml
+│   │   ├── tcc-priority-service-env-patch.yaml
+│   │   ├── tcc-status-service-secret.yaml
+│   │   ├── tcc-status-service-env-patch.yaml
+│   │   ├── tcc-state-controller-secret.yaml
+│   │   └── tcc-state-controller-env-patch.yaml
+│   ├── network-policies/    # Network policies for namespace isolation
+│   │   ├── gruppe8-tcc-policy.yaml
+│   │   ├── gruppe8-traffic-light-devices-policy.yaml
+│   │   ├── gruppe8-shared-services-policy.yaml
+│   │   └── gruppe8-ingress-nginx-policy.yaml
 │   ├── pki/                 # PKI from Task 1 (if not already deployed)
 │   │   ├── ca-certificate.yaml
 │   │   └── ca-issuer.yaml
-│   ├── test-pod.yaml        # Test pod for cluster-internal testing
-│   └── namespaces/          # Namespace definitions
-│       └── gruppe8-tcc.yaml
+│   ├── namespaces/          # Namespace definitions
+│   │   └── gruppe8-tcc.yaml
+│   ├── testing-pod/          # Test pod configurations
+│   │   └── gruppe8-testing-pod.yaml
+│   └── test-pod.yaml        # Test pod for cluster-internal testing
 ├── scripts/                 # Helper scripts
 │   ├── extract-ca-cert.sh   # Extract CA certificate for local client testing
-│   └── extract-client-cert.sh # Extract client certificate for mTLS
+│   ├── extract-client-cert.sh # Extract client certificate for mTLS
+│   └── convert-ca-to-pkcs12.sh # Convert CA certificate to PKCS12 format
+├── certs/                   # Extracted certificates (gitignored)
+├── setup-certs-now.sh      # Script to extract and setup all certificates
 ├── test-endpoints.sh        # Comprehensive endpoint testing script
+├── testing-access-endpoints.md # Guide for testing internal access policy
+├── group8-task5-realm-import.json # Keycloak realm configuration
 ├── pom.xml                  # Parent POM for all modules
 └── README.md                # You are here
 ```
-
-### REST API Specification (Team Agreement)
-
-Complete overview of all REST endpoints organized by service.
 
 ### REST API Specification Table View
 
@@ -142,7 +164,8 @@ kubectl wait --for=condition=Ready certificate \
 # Step 4: Deploy Ingress (before building to avoid conflicts)
 kubectl apply -f kubernetes/ingress.yaml
 
-#Step 5: Deploy updated Keycloak.yaml and wait for deployment. This is necessary to guarantee the Securicy Policy. Changes are explained in later Section.
+# Step 5: Deploy updated Keycloak.yaml and wait for deployment
+# This is necessary to guarantee the Security Policy. Changes are explained in later Section.
 kubectl apply -f kubernetes/keycloak.yaml -n keycloak
 kubectl rollout status statefulset/keycloak --timeout=60s
 
@@ -160,8 +183,6 @@ Before we can finally deploy all our services, we need to first import the keycl
 - kubectl access to the cluster
 - File group8-task5-realm-import.json is present locally
 
-
-
 1. Verify Keycloak pod
 
 ```bash
@@ -176,7 +197,6 @@ keycloak-0   1/1   Running
 
 If the pod name differs, replace keycloak-0 in the commands below.
 
-
 2. Copy the realm import file into the Keycloak pod
 
 ```bash
@@ -184,6 +204,7 @@ kubectl exec -n keycloak -i keycloak-0 -- sh -c \
   'cat > /tmp/group8-task5-realm-import.json' \
   < group8-task5-realm-import.json
 ```
+
 Verify the file exists:
 
 ```bash
@@ -198,13 +219,14 @@ kubectl exec -n keycloak keycloak-0 -- \
   --http-management-port=9002 \
   --file /tmp/group8-task5-realm-import.json
 ```
+
 Expected output includes lines indicating successful realm import.
 
-You can verifiy that the keycloak import worked by visiting the keycloak-admin ui. You should see the realm ```group8-task5```
+You can verify that the keycloak import worked by visiting the keycloak-admin ui. You should see the realm `group8-task5`
 
-**URL** ```keycloak.test```
-**Username** : ```temp-admin```
-**Password** : ```923b2ce326014a22b99766c7c5ab98d2```
+**URL** `keycloak.test`
+**Username** : `temp-admin`
+**Password** : `923b2ce326014a22b99766c7c5ab98d2`
 
 Then in a final step, deploy the Quarkus Services:
 
@@ -241,9 +263,9 @@ kubectl get services -A | grep gruppe8
 kubectl get ingress -n gruppe8-tcc
 ```
 
-# Run Clients
+## Run Clients
 
-Follow the next steps to run the external clients locally. 
+Follow the next steps to run the external clients locally.
 
 ## Setup Client Certificates {#setup-client-certificates}
 
@@ -265,50 +287,73 @@ This script:
 
 ## Setup Host URL's
 
-```
-# On macOS/Linux, edit /etc/hosts (requires sudo)
+###### On macOS/Linux, edit /etc/hosts (requires sudo)
+
+```bash
 sudo nano /etc/hosts
 # Add these lines:
 127.0.0.1 tcc.test
 127.0.0.1 keycloak.test
 ```
 
-**Note:** On Windows, edit ```C:\Windows\System32\drivers\etc\hosts``` as Administrator.
+**Note:** On Windows, edit `C:\Windows\System32\drivers\etc\hosts` as Administrator.
 
 **Alternative: Port-Forward (if Ingress is not available)**
 
 If you prefer port-forwarding instead of Ingress:
 
-# WHICH PORT TO SUGGEST i tested on the https ports ????
+###### Use different localhost ports for each service to avoid conflicts
 
 ```bash
 # In a separate terminal, forward the Priority Service port
 kubectl port-forward -n gruppe8-tcc service/gruppe8-tcc-priority-service 8443:443
 
-# Open another terminal and forward the keycloak ingress
-kubectl port-forward -n keycloak svc/keycloak-service 8443:8443
-```
-
-```bash
-# Forward Keycloak port to localhost
-kubectl port-forward -n keycloak svc/keycloak-service 8080:80
+# Open another terminal and forward the Keycloak service
+kubectl port-forward -n keycloak svc/keycloak-service 8444:8443
 ```
 
 **Note:** Port-forwarding only allows access to one service at a time. Ingress (recommended) allows access to all services via a single hostname.
 
 ## Starting and using the interactive External Clients
 
-With this release, the clients are now interactive and provide a GUI via terminal where the endpoints of our cluster can be reached. An example for the emergency-vehicle-client follows, it is done the same for all other clients:
+**Prerequisites:**
 
-```
-#Open a new terminal window per client
+1. Ensure you have a `.env` file in the `clients/` directory with the required client secrets.
+2. The `.env` file contains all client secrets
 
+With this release, the clients are now interactive and provide a GUI via terminal where the endpoints of our cluster can be reached. To open it do the following:
+
+**Option 1: Use run.sh Script (Recommended)**
+
+Each client directory has a `run.sh` script that automatically loads secrets and runs the client:
+
+```bash
+# Pedestrian Client
+cd clients/pedestrian-client
+./run.sh
+
+# Emergency Vehicle Client
 cd clients/emergency-vehicle-client
+./run.sh
 
-mvn clean package
+and so on....
+```
 
+**Option 2: Manual Commands**
+
+**Example (Pedestrian Client):**
+
+```bash
+cd clients/pedestrian-client
+source ../.env
+export CLIENT_SECRET="${PEDESTRIAN_CLIENT_SECRET}"
+mvn clean package -DskipTests
 java -Dbase.url=https://tcc.test -jar target/quarkus-app/quarkus-run.jar
 ```
+
+**Analog for other clients:** Replace `pedestrian-client` with the respective client directory (`emergency-vehicle-client`, `mayor-vehicle-client`, `other-vehicle-client`) and use the corresponding environment variable (`EMERGENCY_VEHICLE_CLIENT_SECRET`, `MAYOR_VEHICLE_CLIENT_SECRET`, `OTHER_VEHICLE_CLIENT_SECRET`).
+
+**Note:** No secrets are stored in the code. `.env` file contains all client secrets.
 
 This opens an interactive Quarkus Client, from which the public API Endpoints can be called. You are presented 5 Options:
 
@@ -328,11 +373,49 @@ An example call for the endpoint https://tcc.test/api/status/traffic?vehicle={Bo
 1 true
 ```
 
-**Note:** This calls the endpoint /api/status/traffic?vehicle={Boolean} with the Boolean value ```true```
+**Note:** This calls the endpoint /api/status/traffic?vehicle={Boolean} with the Boolean value `true`
 
 - The first 3 options are manual calls to the endpoints with the possibility to input the parameters.
 - The 4th "4" option is a demo run to make testing the clients easier.
-- The 5th option "q" shuts off the client. 
+- The 5th option "q" shuts off the client.
+
+### Alternative: Direct API Testing with curl
+
+For direct API testing without the interactive clients:
+
+**Prerequisites:**
+
+- Services deployed and running
+- Certificates extracted (`./setup-certs-now.sh`)
+- `/etc/hosts` configured with `tcc.test` and `keycloak.test`
+- `.env` file with client secrets
+- Execute from the `task5/` directory (where `certs/` folder is located)
+
+**Replace `<secret>` with the actual client secret from your `.env` file:**
+
+```bash
+cd task5  # Important: Execute from task5 directory!
+
+# Get token from Keycloak (needs CA cert for HTTPS)
+TOKEN=$(curl -s --cacert certs/ca.crt \
+  -d grant_type=client_credentials \
+  -d client_id=emergency-vehicle-client \
+  -d client_secret=YOUR_EMERGENCY_VEHICLE_CLIENT_SECRET_HERE \
+  https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+# Call Priority Service API
+curl -X POST \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"vehicleType":"emergency"}' \
+  "https://tcc.test/api/priority/requests"
+```
+
+**Note:** The client secret can be found in your `.env` file as `EMERGENCY_VEHICLE_CLIENT_SECRET`.
 
 ## Security Implementation Summary
 
@@ -353,65 +436,64 @@ All microservices now implement OIDC-based authentication for external client re
 
 **Authorized Roles for each Service**
 
-| Service Name | Authorized Roles |
-|-------------|------------------|
-| `tcc-priority-service` | `emergency-vehicle`, `mayor-vehicle` |
-| `tcc-status-service` | `emergency-vehicle`, `mayor-vehicle`, `other-vehicle`, `pedestrian` |
-| `tcc-state-controller` | `tcc-priority-service-control-role` |
-| `tcc-audit-service` | `tcc-priority-service-audit-role`, `tcc-state-controller-audit-role` |
-| `time-service` | `tcc-priority-service-time-service`, `tcc-status-service-time-service` |
-| `location-validator` | `tcc-priority-service-location-role` |
+| Service Name                   | Authorized Roles                                                         |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| `tcc-priority-service`         | `emergency-vehicle`, `mayor-vehicle`                                     |
+| `tcc-status-service`           | `emergency-vehicle`, `mayor-vehicle`, `other-vehicle`, `pedestrian`      |
+| `tcc-state-controller`         | `tcc-priority-service-controll-service`                                  |
+| `tcc-audit-service`            | `tcc-priority-service-audit-role`, `tcc-state-controller-audit-role`     |
+| `time-service`                 | `tcc-priority-service-time-service`, `tcc-status-service-time-service`   |
+| `location-validator`           | `tcc-priority-service-location-role`                                     |
 | `traffic-light-device-service` | `tcc-state-controller-light-service`, `tcc-status-service-light-service` |
 
-**Note:** Services only allow access by authorized roles. 
+**Note:** Services only allow access by authorized roles.
 
 **Service-Roles for Internal Clients**
 
-| Internal Client | Assigned Roles |
-|----------------|----------------|
+| Internal Client        | Assigned Roles                                                                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tcc-priority-service` | `tcc-priority-service-location-role`, `tcc-priority-service-controll-service`, `tcc-priority-service-audit-role`, `tcc-priority-service-time-service` |
-| `tcc-status-service` | `tcc-status-service-light-service`, `tcc-status-service-time-service` |
-| `tcc-state-controller` | `tcc-state-controller-audit-role`, `tcc-state-controller-light-service` |
+| `tcc-status-service`   | `tcc-status-service-light-service`, `tcc-status-service-time-service`                                                                                 |
+| `tcc-state-controller` | `tcc-state-controller-audit-role`, `tcc-state-controller-light-service`                                                                               |
 
 **Note:** These are the service-roles each internal client is assigned
 
-
 **Service-Roles for External Clients**
 
-| Client | Assigned Roles |
-|-------|----------------|
+| Client                     | Assigned Roles                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `emergency-vehicle-client` | `emergency-vehicle`, `tcc-priority-service-emergency-vehicle`, `tcc-status-service-emergency-vehicle` |
-| `mayor-vehicle-client` | `mayor-vehicle`, `tcc-priority-service-mayor-vehicle`, `tcc-status-service-mayor-vehicle` |
-| `other-vehicle-client` | `other-vehicle`, `tcc-priority-service-other-vehicle`, `tcc-status-service-other-vehicle` |
-| `pedestrian-client` | `pedestrian`, `tcc-priority-service-pedestrian`, `tcc-status-servicepe-destrian` |
+| `mayor-vehicle-client`     | `mayor-vehicle`, `tcc-priority-service-mayor-vehicle`, `tcc-status-service-mayor-vehicle`             |
+| `other-vehicle-client`     | `other-vehicle`, `tcc-priority-service-other-vehicle`, `tcc-status-service-other-vehicle`             |
+| `pedestrian-client`        | `pedestrian`, `tcc-priority-service-pedestrian`, `tcc-status-service-pedestrian`                      |
 
 **Note:** These are the service-roles each external client is assigned
 
 **Changes to Keycloak yaml**
 
-As previously described a new keycloak.yaml file must be applied to enable our security policy. 
+As previously described a new keycloak.yaml file must be applied to enable our security policy.
 
 The keycloak.yaml consists of 3 Parts:
 
 1. The keycloak deployment
 2. The keycloak certificate
-3. The keycloak ingress 
+3. The keycloak ingress
 
 For deployment the following was modified:
 
 ```yaml
-  http:
-    httpEnabled: false                                #Disables HTTP Requests for Keycloak
-    tlsSecret: keycloak-tls-secret                    #Mount the keycloak-secret for TLS 
-  hostname:
-    hostname: https://keycloak.test/keycloak          #Set keycloak hostname
-    strict: false
-    backchannelDynamic: true                          #Enable internal DNS for backend Requests. 
+http:
+  httpEnabled: false #Disables HTTP Requests for Keycloak
+  tlsSecret: keycloak-tls-secret #Mount the keycloak-secret for TLS
+hostname:
+  hostname: https://keycloak.test/keycloak #Set keycloak hostname
+  strict: false
+  backchannelDynamic: true #Enable internal DNS for backend Requests.
 ```
 
 **Keycloak Certificate**
 
-After extracting the certificate, you can find it in ```certs/keycloak_ca.crt```. This is the certificate:
+After extracting the certificate, you can find it in `certs/keycloak_ca.crt`. This is the certificate:
 
 ```
 openssl x509 -in certs/ca_keycloak.crt -text -noout
@@ -438,13 +520,13 @@ Certificate:
                 ASN1 OID: prime256v1
                 NIST CURVE: P-256
         X509v3 extensions:
-            X509v3 Extended Key Usage: 
+            X509v3 Extended Key Usage:
                 TLS Web Server Authentication
             X509v3 Basic Constraints: critical
                 CA:FALSE
-            X509v3 Authority Key Identifier: 
+            X509v3 Authority Key Identifier:
                 37:E0:72:55:46:79:2E:12:48:D3:C9:9E:D1:5D:C6:6F:B2:61:5A:22
-            X509v3 Subject Alternative Name: 
+            X509v3 Subject Alternative Name:
                 DNS:keycloak.test, DNS:keycloak-service.keycloak.svc.cluster.local
     Signature Algorithm: ecdsa-with-SHA256
     Signature Value:
@@ -527,68 +609,24 @@ Patch manifests are available in `kubernetes/secrets/`:
 - `tcc-status-service-env-patch.yaml`
 - `tcc-state-controller-env-patch.yaml`
 
-#### External Testing (from your local machine)
+#### 3. External Client Secrets
 
-**Prerequisites:**
+External client secrets are now stored in `.env` files instead of plaintext in `application.properties`:
 
-- Ingress is deployed (`kubernetes/ingress.yaml`)
-- Certificates have been extracted: `./setup-certs-now.sh` executed
-- `/etc/hosts` contains `127.0.0.1 tcc.test` and `127.0.0.1 keycloak.test`or port forwarding from above example
-- Keycloak realm `group8-task5` is imported and clients are present
+**Setup:**
 
-**1. Standard TLS Clients (Mayor, Other, Pedestrian):**
+1. Ensure you have a `.env` file in the `clients/` directory with the required client secrets.
+2. The `.env` file contains all client secrets and is gitignored (not committed to git).
 
-```bash
-cd clients/mayor-vehicle-client
-mvn quarkus:dev -Dbase.url=https://tcc.test
-```
+**See the "Starting and using the interactive External Clients" section above for detailed instructions on how to run the clients.**
 
-Similarly for:
-
-```bash
-cd clients/other-vehicle-client
-mvn quarkus:dev -Dbase.url=https://tcc.test
-
-cd clients/pedestrian-client
-mvn quarkus:dev -Dbase.url=https://tcc.test
-```
-
-**2. mTLS Client (Emergency Vehicle):**
-
-```bash
-cd clients/emergency-vehicle-client
-mvn quarkus:dev -Dbase.url=https://tcc.test
-```
-
-**3. Optional: Direct curl test via Ingress (without clients):**
-
-```bash
-# Get token from Keycloak Ingress
-TOKEN=$(curl -s \
-  -d grant_type=client_credentials \
-  -d client_id=emergency-vehicle-client \
-  -d client_secret=<secret> \
-  https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
-  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
-
-# Call Priority Service via Ingress
-curl -v -X POST \
-  --cacert certs/ca.crt \
-  --cert certs/client.crt \
-  --key certs/client.key \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency"}' \
-  "https://tcc.test/api/priority/requests"
-```
-
-#### 3. Internal Security Policy (Service-to-Service Authentication)
+#### 4. Internal Security Policy (Service-to-Service Authentication)
 
 Already implemented in previous tasks:
 
-- ✅ mTLS for service-to-service communication
-- ✅ OIDC client credentials flow for service-to-service calls
-- ✅ Role-based access control for internal service endpoints
+- mTLS for service-to-service communication
+- OIDC client credentials flow for service-to-service calls
+- Role-based access control for internal service endpoints
 
 ### Security Policy Documentation
 
@@ -656,7 +694,7 @@ kubectl config set-context --current --namespace=keycloak
 #### 2. Export the realm to a file inside the pod
 
 ```
-kubectl exec -n keycloak keycloak-0 -- \                                                                           
+kubectl exec -n keycloak keycloak-0 -- \
   /opt/keycloak/bin/kc.sh export --optimized \
   --http-management-port=9002 \
   --file /tmp/group8-task5-realm-import-new.json
@@ -673,32 +711,3 @@ kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
 ```
 kubectl exec -n keycloak keycloak-0 -- cat /tmp/group8-task5-realm-import.json > group8-task5-realm-import.json
 ```
-
-
-# TODO'S (ranked after priority somewhat)
-
-- ~~keycloak service to service for all services~~
-- ~~set up keycloak so its redeployable across systems~~
-- ~~setup external client connection to public ingress url of keycloak~~
-- ~~create yaml for all secrets so they are not plaintext~~
-- ~~look at keycloak via https~~
-- ~~look at keycloak via https for external clients~~
-- ~~check and implement for "interactive client" (see feedback last task)~~
-- ~~make all folders 1 to task5 i mean we have releases anyway and could convert back if we need.~~
-- save external client-secrets as non plaintext
-- unify role names (currently, some are service some are role. I fucked up here)
-- delete unnecessary roles (die pedestrian und mayor role für prio service, haben ja eh kein acess)
-
-zu klären wieso:
-
-# Time Service REST Client (internal service-to-service with mTLS)
-
-de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/url=https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443
-de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/trust-store=tls
-de.tub.aot.tcc.priority.TimeServiceClient/mp-rest/key-store=tls
-
-in tcc.priority.services ist
-
--FIX 500 error when calling priority service and we forward to endpoint. (currently commented out) some weird mtls / tls server/client bullshit bug
-
-%prod.quarkus.rest-client.traffic-light-api.tls-configuration-name=http (irgendwie sowas hier halt wird der fix sein glaube ich, der handshake beim weiterleiten failed)
