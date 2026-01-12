@@ -360,7 +360,7 @@ This opens an interactive Quarkus Client, from which the public API Endpoints ca
 ```
 === Menu ===
 1 <Boolean>        → GET  /api/status/traffic?vehicle={Boolean}
-2                  → POST /api/priority/requests   (pedestrian)
+2                  → POST /api/priority/requests   
 3 <requestId>      → GET  /api/priority/requests/{requestId}
 4                  → Run a demo of all endpoints with dummy data.
 q                  → Quit
