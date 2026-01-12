@@ -222,7 +222,7 @@ kubectl exec -n keycloak keycloak-0 -- \
 
 Expected output includes lines indicating successful realm import.
 
-You can verify that the keycloak import worked by visiting the keycloak-admin ui. You should see the realm `group8-task5`
+You can verify that the keycloak import worked by visiting the keycloak-admin ui. For this you need to setup the Host URL's or port forwarding. (See further down) You should see the realm `group8-task5`
 
 **URL** `keycloak.test`
 **Username** : `temp-admin`
