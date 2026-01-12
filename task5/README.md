@@ -211,7 +211,7 @@ Verify the file exists:
 kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
 ```
 
-3. Import the realm into Keycloak (change http management port when keycloak is still turned on)
+3. Import the realm into Keycloak (The  http management port needs to be changed when keycloak is still turned on. Alternatively turn off keycloak.)
 
 ```bash
 kubectl exec -n keycloak keycloak-0 -- \
