@@ -536,18 +536,6 @@ Certificate:
         71:f6:b0:e2:8b:f2:a2:f7:7d:f4:e9:31:25:c8:ce:8a
 ```
 
-**Example Configuration (application.properties):**
-
-```properties
-# OIDC Server Configuration for External Authentication
-quarkus.oidc.auth-server-url=http://keycloak-service.keycloak.svc.cluster.local:8080/keycloak/realms/group8-task5
-quarkus.oidc.discovery-enabled=true
-quarkus.oidc.client-id=tcc-priority-service
-quarkus.oidc.application-type=service
-quarkus.oidc.roles.source=accesstoken
-quarkus.oidc.roles.role-claim-path=resource_access/tcc-priority-service/roles
-```
-
 **Example Endpoint Protection (Java):**
 
 ```java
@@ -657,8 +645,6 @@ Realm: group8-task5
     Roles:
       - emergency-vehicle
       - mayor-vehicle
-      - other-vehicle
-      - pedestrian
 ```
 
 #### Internal Access Policy
