@@ -21,6 +21,8 @@ task5/
 │   │   └── run.sh
 │   ├── pedestrian-client/
 │   │   └── run.sh
+│   ├── traffic-management-center-client/
+│   │   └── run.sh
 │   └── .env.example                  # Template for client secrets (copy to .env)
 ├── kubernetes/              # Kubernetes deployment manifests
 │   ├── ingress.yaml         # Manual Ingress configuration (TLS enabled)
@@ -41,7 +43,8 @@ task5/
 │   │   ├── tcc-status-service-secret.yaml
 │   │   ├── tcc-status-service-env-patch.yaml
 │   │   ├── tcc-state-controller-secret.yaml
-│   │   └── tcc-state-controller-env-patch.yaml
+│   │   ├── tcc-state-controller-env-patch.yaml
+│   │   └── traffic-management-center-client-secret.yaml
 │   ├── network-policies/    # Network policies for namespace isolation
 │   │   ├── gruppe8-tcc-policy.yaml
 │   │   ├── gruppe8-traffic-light-devices-policy.yaml
@@ -336,6 +339,10 @@ cd clients/pedestrian-client
 cd clients/emergency-vehicle-client
 ./run.sh
 
+# Traffic Management Center Client
+cd clients/traffic-management-center-client
+./run.sh
+
 and so on....
 ```
 
@@ -351,7 +358,7 @@ mvn clean package -DskipTests
 java -Dbase.url=https://tcc.test -jar target/quarkus-app/quarkus-run.jar
 ```
 
-**Analog for other clients:** Replace `pedestrian-client` with the respective client directory (`emergency-vehicle-client`, `mayor-vehicle-client`, `other-vehicle-client`) and use the corresponding environment variable (`EMERGENCY_VEHICLE_CLIENT_SECRET`, `MAYOR_VEHICLE_CLIENT_SECRET`, `OTHER_VEHICLE_CLIENT_SECRET`).
+**Analog for other clients:** Replace `pedestrian-client` with the respective client directory (`emergency-vehicle-client`, `mayor-vehicle-client`, `other-vehicle-client`, `traffic-management-center-client`) and use the corresponding environment variable (`EMERGENCY_VEHICLE_CLIENT_SECRET`, `MAYOR_VEHICLE_CLIENT_SECRET`, `OTHER_VEHICLE_CLIENT_SECRET`, `TRAFFIC_MANAGEMENT_CENTER_CLIENT_SECRET`).
 
 **Note:** No secrets are stored in the code. `.env` file contains all client secrets.
 

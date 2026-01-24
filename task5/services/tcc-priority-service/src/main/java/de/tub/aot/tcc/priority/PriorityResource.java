@@ -1,5 +1,6 @@
 package de.tub.aot.tcc.priority;
 
+import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.Consumes;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @Path("/api/priority")
 @ApplicationScoped
+@DenyAll
 public class PriorityResource {
 
     private Map<String, RequestStatus> requestStore = new HashMap<>();
@@ -23,7 +25,7 @@ public class PriorityResource {
     @Path("/requests")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "traffic-management-center" })
     public PriorityResponse createPriorityRequest(PriorityRequest request) {
         String requestId = UUID.randomUUID().toString();
         String status = "accepted";
@@ -37,7 +39,7 @@ public class PriorityResource {
     @GET
     @Path("/requests/{request_id}")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "traffic-management-center" })
     public RequestStatus getRequestStatus(@PathParam("request_id") String requestId) {
         RequestStatus status = requestStore.get(requestId);
 
