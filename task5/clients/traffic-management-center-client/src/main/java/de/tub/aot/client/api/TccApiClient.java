@@ -1,5 +1,7 @@
 package de.tub.aot.client.api;
 
+import de.tub.aot.common.models.TrafficStatus;
+
 import io.quarkus.oidc.client.filter.OidcClientFilter;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;

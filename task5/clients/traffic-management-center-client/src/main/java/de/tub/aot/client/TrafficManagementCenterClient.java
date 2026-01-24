@@ -6,7 +6,7 @@ import de.tub.aot.client.api.PriorityRequest;
 import de.tub.aot.client.api.PriorityResponse;
 import de.tub.aot.client.api.RequestStatus;
 import de.tub.aot.client.api.TccApiClient;
-import de.tub.aot.client.api.TrafficStatus;
+import de.tub.aot.common.models.TrafficStatus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.enterprise.context.ApplicationScoped;

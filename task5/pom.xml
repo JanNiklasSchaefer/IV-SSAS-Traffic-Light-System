@@ -9,6 +9,7 @@
    <packaging>pom</packaging>
    
    <modules>
+      <module>common-models</module>
       <module>services/tcc-priority-service</module>
       <module>services/tcc-state-controller</module>
       <module>services/tcc-status-service</module>
@@ -20,6 +21,7 @@
       <module>clients/mayor-vehicle-client</module>
       <module>clients/other-vehicle-client</module>
       <module>clients/pedestrian-client</module>
+      <module>clients/traffic-management-center-client</module>
    </modules>
    
    <properties>
