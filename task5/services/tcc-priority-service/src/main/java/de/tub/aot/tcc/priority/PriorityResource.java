@@ -18,6 +18,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -28,6 +29,8 @@ import java.util.UUID;
 @ApplicationScoped
 @DenyAll
 public class PriorityResource {
+
+    private static final Logger LOG = Logger.getLogger(PriorityResource.class);
 
     private Map<String, RequestStatus> requestStore = new HashMap<>();
 
@@ -56,49 +59,55 @@ public class PriorityResource {
         String requestId = UUID.randomUUID().toString();
         String status = "accepted";
 
+        LOG.info("=== Priority Request received: " + requestId + " ===");
+
+        // 1. Time Service aufrufen - Timestamp validieren
+        LOG.info("Calling Time Service...");
         try {
-            // 1. Time Service aufrufen - Timestamp validieren
             TimeValidationRequest timeRequest = new TimeValidationRequest(Instant.now().toEpochMilli());
             TimeValidationResponse timeResponse = timeClient.validateTimestamp(timeRequest);
-            System.out.println("Time Service Response: " + (timeResponse != null ? "OK" : "NULL"));
+            LOG.info("Time Service Response: " + (timeResponse != null ? "OK" : "NULL"));
+        } catch (Exception e) {
+            LOG.warn("Time Service call failed: " + e.getMessage());
+        }
 
-            // 2. Location Validator aufrufen - Vehicle Location validieren
-            // Beispiel: LocationValidationRequest würde vehicleId und coordinates benötigen
-            // Hier nur als Beispiel - in echter Implementierung würde das vom Request
-            // kommen
+        // 2. Location Validator aufrufen - Vehicle Location validieren
+        // Beispiel: LocationValidationRequest würde vehicleId und coordinates benötigen
+        // Hier nur als Beispiel - in echter Implementierung würde das vom Request
+        // kommen
+        LOG.info("Calling Location Validator...");
+        try {
             LocationValidationRequest locationRequest = new LocationValidationRequest(
                     "vehicle-" + requestId,
                     null // Coordinates würden hier gesetzt werden
             );
-            try {
-                LocationValidationResponse locationResponse = locationClient.validateVehicleLocation(locationRequest);
-                System.out.println("Location Validator Response: " + (locationResponse != null ? "OK" : "NULL"));
-            } catch (Exception e) {
-                System.err.println("Location validation failed (expected if coordinates not set): " + e.getMessage());
-            }
+            LocationValidationResponse locationResponse = locationClient.validateVehicleLocation(locationRequest);
+            LOG.info("Location Validator Response: " + (locationResponse != null ? "OK" : "NULL"));
+        } catch (Exception e) {
+            LOG.warn("Location validation failed (expected if coordinates not set): " + e.getMessage());
+        }
 
-            // 3. State Controller aufrufen - State Change anstoßen
+        // 3. State Controller aufrufen - State Change anstoßen
+        LOG.info("Calling State Controller...");
+        try {
             StateChangeRequest stateRequest = new StateChangeRequest();
             stateRequest.setState("priority-request");
-            try {
-                Response stateResponse = stateControllerClient.changeState(stateRequest);
-                System.out.println("State Controller Response: " + stateResponse.getStatus());
-            } catch (Exception e) {
-                System.err.println("State Controller call failed: " + e.getMessage());
-            }
-
-            // 4. Audit Service aufrufen - Event loggen
-            try {
-                Response auditResponse = auditClient.logEvent("Priority request created: " + requestId);
-                System.out.println("Audit Service Response: " + auditResponse.getStatus());
-            } catch (Exception e) {
-                System.err.println("Audit Service call failed: " + e.getMessage());
-            }
-
+            Response stateResponse = stateControllerClient.changeState(stateRequest);
+            LOG.info("State Controller Response: " + stateResponse.getStatus());
         } catch (Exception e) {
-            System.err.println("Error during internal service calls: " + e.getMessage());
-            // Continue anyway - noch keine Logik, nur Routing testen
+            LOG.warn("State Controller call failed: " + e.getMessage());
         }
+
+        // 4. Audit Service aufrufen - Event loggen
+        LOG.info("Calling Audit Service...");
+        try {
+            Response auditResponse = auditClient.logEvent("Priority request created: " + requestId);
+            LOG.info("Audit Service Response: " + auditResponse.getStatus());
+        } catch (Exception e) {
+            LOG.warn("Audit Service call failed: " + e.getMessage());
+        }
+
+        LOG.info("=== Priority Request processing completed: " + requestId + " ===");
 
         RequestStatus requestStatus = new RequestStatus(requestId, "processing", request.getVehicleType());
         requestStore.put(requestId, requestStatus);

@@ -46,3 +46,10 @@ spec:
                 name: gruppe8-tcc-status-service
                 port:
                   name: https
+          - path: /api/state
+            pathType: Prefix
+            backend:
+              service:
+                name: gruppe8-tcc-state-controller
+                port:
+                  name: https
