@@ -8,11 +8,21 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+import de.tub.aot.trafficLightDevice.service.TrafficStatus;
+import de.tub.aot.timeservice.TimeValidationResponse;
+import de.tub.aot.timeservice.TimeValidationRequest;
+
 
 @Path("/api/status")
 @ApplicationScoped
 @DenyAll
 public class StatusResource {
+
+    @Inject
+    @RestClient
+    TrafficStatusLightClient statusClient; 
 
     @GET
     @Path("/traffic")
@@ -20,7 +30,15 @@ public class StatusResource {
     @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center" })
     public TrafficStatus getTrafficStatus(@QueryParam("vehicle") Boolean vehicle) {
         TrafficStatus status = new TrafficStatus();
-        status.setState("green");
+        try{
+            status = statusClient.getState(vehicle);
+            System.out.println("response:" + status);
+            return status;
+        }
+        catch (Exception e) {
+            System.err.println("Call failed: " + e.getMessage());
+        }
+        status.setState("yellow");
         status.setTimestamp("2024-01-01T12:00:00Z");
         return status;
     }
