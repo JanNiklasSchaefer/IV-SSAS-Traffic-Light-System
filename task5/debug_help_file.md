@@ -7,6 +7,7 @@ TOKEN=$(curl -s --cacert certs/ca.crt \
 
 echo "LEN=${#TOKEN}"    
 
+## test status 
 
 curl -v -X GET \
   --cacert certs/ca.crt \
@@ -17,6 +18,17 @@ curl -v -X GET \
   -d '{}' \
   "https://tcc.test/api/status/traffic?vehicle=true"
 
+
+## test priority
+
+curl -v -X POST \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"vehicleType":"emergency"}' \
+  "https://tcc.test/api/priority/requests"
 
   ## redeploy a single service example call:
 
