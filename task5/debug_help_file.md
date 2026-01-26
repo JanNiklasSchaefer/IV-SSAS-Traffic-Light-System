@@ -9,6 +9,7 @@ echo "LEN=${#TOKEN}"
 
 ## test status 
 
+```
 curl -v -X GET \
   --cacert certs/ca.crt \
   --cert certs/client.crt \
@@ -17,10 +18,11 @@ curl -v -X GET \
   -H "Content-Type: application/json" \
   -d '{}' \
   "https://tcc.test/api/status/traffic?vehicle=true"
-
+```
 
 ## test priority
 
+```
 curl -v -X POST \
   --cacert certs/ca.crt \
   --cert certs/client.crt \
@@ -29,7 +31,7 @@ curl -v -X POST \
   -H "Content-Type: application/json" \
   -d '{"vehicleType":"emergency"}' \
   "https://tcc.test/api/priority/requests"
-
+```
   ## redeploy a single service example call:
 
 
