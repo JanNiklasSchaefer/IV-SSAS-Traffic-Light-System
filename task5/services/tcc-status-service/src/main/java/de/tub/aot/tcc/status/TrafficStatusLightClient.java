@@ -11,6 +11,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import io.quarkus.oidc.client.filter.OidcClientFilter;
+import de.tub.aot.trafficLightDevice.service.TrafficStatus;
+
 
 
 
@@ -20,11 +22,9 @@ import io.quarkus.oidc.client.filter.OidcClientFilter;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public interface TrafficStatusLightClient {
-    
-    @POST
-    @Path("/api/device/change-state")
-    Response changeState(@QueryParam("state") String currentState);
-
     // TODO: Add Other Client Endpoints to reach services internally
+    @GET
+    @Path("/api/device/traffic-state")
+    TrafficStatus getState(@QueryParam("vehicle") Boolean vehicle);
 }
 
