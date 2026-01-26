@@ -1,3 +1,4 @@
+```
 TOKEN=$(curl -s --cacert certs/ca.crt \
   -d grant_type=client_credentials \
   -d client_id=emergency-vehicle-client \
@@ -6,7 +7,7 @@ TOKEN=$(curl -s --cacert certs/ca.crt \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 echo "LEN=${#TOKEN}"    
-
+```
 ## test status 
 
 ```
