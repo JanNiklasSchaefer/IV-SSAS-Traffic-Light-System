@@ -237,6 +237,8 @@ Then in a final step, deploy the Quarkus Services:
 # Step 7: Build and deploy all services
 mvn clean package -Dquarkus.kubernetes.deploy=true
 
+kubectl apply -f kubernetes/secrets/
+
 # Step 8: Verify deployment (optional)
 # See "Verify Deployment" section below for commands
 ```
@@ -407,12 +409,12 @@ cd task5  # Important: Execute from task5 directory!
 TOKEN=$(curl -s --cacert certs/ca.crt \
   -d grant_type=client_credentials \
   -d client_id=emergency-vehicle-client \
-  -d client_secret=YOUR_EMERGENCY_VEHICLE_CLIENT_SECRET_HERE \
+  -d client_secret=HgieJW7qal3HUr0R7vThPMLd6CgSptJF \
   https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 # Call Priority Service API
-curl -X POST \
+curl -v -X POST \
   --cacert certs/ca.crt \
   --cert certs/client.crt \
   --key certs/client.key \
@@ -421,6 +423,17 @@ curl -X POST \
   -d '{"vehicleType":"emergency"}' \
   "https://tcc.test/api/priority/requests"
 ```
+
+
+curl -v \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  "https://tcc.test/api/status/traffic?state=green"
+
 
 **Note:** The client secret can be found in your `.env` file as `EMERGENCY_VEHICLE_CLIENT_SECRET`.
 
