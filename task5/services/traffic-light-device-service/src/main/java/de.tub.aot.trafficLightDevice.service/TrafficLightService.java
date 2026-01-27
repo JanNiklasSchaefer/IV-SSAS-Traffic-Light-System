@@ -1,5 +1,6 @@
 package de.tub.aot.trafficLightDevice.service;
 
+import de.tub.aot.common.models.TrafficStatus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -11,7 +12,6 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Consumes;
 import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
-
 
 @Path("/api/device")
 @ApplicationScoped
@@ -39,14 +39,14 @@ public class TrafficLightService {
     @Path("/change-state")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
+    @RolesAllowed({ "tcc-state-controller-light-service", "tcc-status-service-light-service" })
     public Response changeState(@QueryParam("state") String currentState) {
 
         TrafficStatus newStatus = new TrafficStatus();
-        if("green".equals(currentState)){
+        if ("green".equals(currentState)) {
             newStatus.setState("green");
-        }
-        else newStatus.setState("red");
+        } else
+            newStatus.setState("red");
 
         newStatus.setTimestamp("2024-01-02T12:00:00Z");
         return Response.ok(newStatus).build();

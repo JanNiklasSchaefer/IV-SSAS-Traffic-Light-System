@@ -4,7 +4,7 @@ import de.tub.aot.client.api.PriorityRequest;
 import de.tub.aot.client.api.PriorityResponse;
 import de.tub.aot.client.api.RequestStatus;
 import de.tub.aot.client.api.TccApiClient;
-import de.tub.aot.client.api.TrafficStatus;
+import de.tub.aot.common.models.TrafficStatus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -62,20 +62,21 @@ public class EmergencyVehicleClient implements QuarkusApplication {
                     switch (command) {
                         case "1" -> {
                             if (parts.length != 2) {
-                                System.out.println("ERROR: Missing Vehicle Boolean Input or too many Input Parameters. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
-                            }
-                            else if((!parts[1].equals("true") && !parts[1].equals("false"))){
+                                System.out.println(
+                                        "ERROR: Missing Vehicle Boolean Input or too many Input Parameters. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
+                            } else if ((!parts[1].equals("true") && !parts[1].equals("false"))) {
                                 System.out.println(parts[1]);
-                                System.out.println("ERROR: Wrong Vehicle Boolean Input value. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
-                            }
-                            else {
+                                System.out.println(
+                                        "ERROR: Wrong Vehicle Boolean Input value. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
+                            } else {
                                 callTrafficStatusEndpoint(Boolean.valueOf(parts[1]));
                             }
                         }
                         case "2" -> callPriorityRequestEndpoint();
                         case "3" -> {
                             if (parts.length != 2) {
-                                System.out.println("ERROR: Wrong Input. Correct Pattern: 3 <requestId>. Example Call: \n> 3 123e4567-e89b-12d3-a456-426614174000");
+                                System.out.println(
+                                        "ERROR: Wrong Input. Correct Pattern: 3 <requestId>. Example Call: \n> 3 123e4567-e89b-12d3-a456-426614174000");
                             } else {
                                 callRequestStatusEndpoint(parts[1]);
                             }
@@ -93,12 +94,12 @@ public class EmergencyVehicleClient implements QuarkusApplication {
 
     private void printMenu() {
         System.out.println("""
-                
+
                 === Menu ===
                 1 <Boolean>        → GET  /api/status/traffic?vehicle={Boolean}
-                2                  → POST /api/priority/requests   
+                2                  → POST /api/priority/requests
                 3 <requestId>      → GET  /api/priority/requests/{requestId}
-                4                  → Run a demo of all endpoints with dummy data. 
+                4                  → Run a demo of all endpoints with dummy data.
                 q                  → Quit
                 """);
     }

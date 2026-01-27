@@ -14,9 +14,6 @@ import io.quarkus.oidc.client.filter.OidcClientFilter;
 import de.tub.aot.trafficLightDevice.service.TrafficStatus;
 
 
-
-
-
 @RegisterRestClient(configKey = "traffic-light-api")
 @OidcClientFilter
 @Consumes(MediaType.APPLICATION_JSON)
@@ -27,4 +24,3 @@ public interface TrafficStatusLightClient {
     @Path("/api/device/traffic-state")
     TrafficStatus getState(@QueryParam("vehicle") Boolean vehicle);
 }
-
