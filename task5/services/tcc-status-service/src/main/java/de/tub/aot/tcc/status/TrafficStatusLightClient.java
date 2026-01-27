@@ -11,7 +11,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import io.quarkus.oidc.client.filter.OidcClientFilter;
-import de.tub.aot.trafficLightDevice.service.TrafficStatus;
+import de.tub.aot.common.models.TrafficStatus;
 
 
 @RegisterRestClient(configKey = "traffic-light-api")

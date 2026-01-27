@@ -12,7 +12,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
-import de.tub.aot.trafficLightDevice.service.TrafficStatus;
 import de.tub.aot.timeservice.TimeValidationResponse;
 import de.tub.aot.timeservice.TimeValidationRequest;
 
@@ -41,7 +40,7 @@ public class StatusResource {
 
         TrafficStatus status = new TrafficStatus();
         try{
-            status = statusClient.getState(vehicle);
+            status = lightClient.getState(vehicle);
             System.out.println("response:" + status);
             return status;
         }
