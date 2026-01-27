@@ -21,12 +21,18 @@ public class TrafficLightService {
     @GET
     @Path("/traffic-state")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "tcc-state-controller-light-service", "tcc-status-service-light-service" })
-    public Response getTrafficState() {
+    @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
+    public TrafficStatus getTrafficState(@QueryParam("vehicle") Boolean vehicle) {
         TrafficStatus status = new TrafficStatus();
-        status.setState("green");
-        status.setTimestamp("2024-01-01T12:00:00Z");
-        return Response.ok(status).build();
+        if(vehicle){
+            status.setState("green");
+            status.setTimestamp("2024-01-01T12:00:00Z");
+        }
+        else{
+            status.setState("red");
+            status.setTimestamp("2024-01-01T12:00:00Z");
+        }
+        return status;
     }
 
     @POST

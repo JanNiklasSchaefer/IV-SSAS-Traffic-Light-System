@@ -10,7 +10,12 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import de.tub.aot.trafficLightDevice.service.TrafficStatus;
+import de.tub.aot.timeservice.TimeValidationResponse;
+import de.tub.aot.timeservice.TimeValidationRequest;
+
 
 @Path("/api/status")
 @ApplicationScoped
@@ -35,7 +40,15 @@ public class StatusResource {
         // TODO: Status einer Kreuzung mit allen Ampeln zurückgeben
 
         TrafficStatus status = new TrafficStatus();
-        status.setState("green");
+        try{
+            status = statusClient.getState(vehicle);
+            System.out.println("response:" + status);
+            return status;
+        }
+        catch (Exception e) {
+            System.err.println("Call failed: " + e.getMessage());
+        }
+        status.setState("yellow");
         status.setTimestamp("2024-01-01T12:00:00Z");
         return status;
     }
