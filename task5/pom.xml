@@ -15,7 +15,6 @@
       <module>services/tcc-status-service</module>
       <module>services/tcc-audit-service</module>
       <module>services/traffic-light-device-service</module>
-      <module>services/location-validator</module>
       <module>services/time-service</module>
       <module>clients/emergency-vehicle-client</module>
       <module>clients/mayor-vehicle-client</module>
