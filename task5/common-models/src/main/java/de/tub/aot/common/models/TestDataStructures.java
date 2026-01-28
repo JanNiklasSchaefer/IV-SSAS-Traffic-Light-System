@@ -6,7 +6,7 @@ import java.util.UUID;
 /**
  * Test-Klasse zum manuellen Testen der Datenstrukturen.
  * Führt die Klasse aus, um zu sehen, ob alles funktioniert.
- */
+*/
 public class TestDataStructures {
 
     public static void main(String[] args) {
@@ -25,7 +25,7 @@ public class TestDataStructures {
 
             // Test 2: TrafficLightId erstellen
             System.out.println("2. Test: TrafficLightId erstellen");
-            TrafficLightId lightId = new TrafficLightId(lat, lon, UUID.randomUUID());
+            TrafficLightId lightId = new TrafficLightId(lat, lon, UUID.randomUUID(), "north-south");
             System.out.println("   TrafficLightId: " + lightId);
             System.out.println("   UUID: " + lightId.getUuid());
             System.out.println("   ✅ TrafficLightId funktioniert!\n");
@@ -50,7 +50,8 @@ public class TestDataStructures {
                 TrafficLightId invalid = new TrafficLightId(
                         new GPSCoordinate(50, 0, 0.0, true), // Zu weit nördlich
                         new GPSCoordinate(-121, 30, 0.0, false),
-                        UUID.randomUUID());
+                        UUID.randomUUID(),
+                        "north-south");
                 System.out.println("   ❌ FEHLER: Validierung hat nicht funktioniert!");
             } catch (IllegalArgumentException e) {
                 System.out.println("   ✅ Validierung funktioniert: " + e.getMessage() + "\n");
@@ -73,3 +74,4 @@ public class TestDataStructures {
         }
     }
 }
+

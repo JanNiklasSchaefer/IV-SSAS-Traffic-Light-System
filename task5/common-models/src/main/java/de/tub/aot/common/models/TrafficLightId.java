@@ -14,6 +14,7 @@ public class TrafficLightId {
     private GPSCoordinate latitude;
     private GPSCoordinate longitude;
     private UUID uuid;
+    private String direction;
 
     public TrafficLightId() {
     }
@@ -27,23 +28,21 @@ public class TrafficLightId {
      * @throws IllegalArgumentException if coordinates are not within Duckburg
      *                                  limits
      */
-    public TrafficLightId(GPSCoordinate latitude, GPSCoordinate longitude, UUID uuid) {
+    public TrafficLightId(GPSCoordinate latitude, GPSCoordinate longitude, UUID uuid, String direction) {
         this.setLatitude(latitude);
         this.setLongitude(longitude);
         this.setUuid(uuid);
+        this.setDirection(direction);
         validateDuckburgLocation();
     }
 
-    /**
-     * Creates a TrafficLightId with GPS coordinates and generates a new UUID.
-     * 
-     * @param latitude  GPS latitude coordinate in DMS format
-     * @param longitude GPS longitude coordinate in DMS format
-     * @throws IllegalArgumentException if coordinates are not within Duckburg
-     *                                  limits
-     */
-    public TrafficLightId(GPSCoordinate latitude, GPSCoordinate longitude) {
-        this(latitude, longitude, UUID.randomUUID());
+
+    public void setDirection(String direction){
+        this.direction = direction;
+    }
+
+    public String getDirection(){
+        return this.direction;
     }
 
     public GPSCoordinate getLatitude() {

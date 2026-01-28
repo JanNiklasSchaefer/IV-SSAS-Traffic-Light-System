@@ -12,7 +12,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import io.quarkus.oidc.client.filter.OidcClientFilter;
 import de.tub.aot.common.models.TrafficStatus;
-
+import java.util.ArrayList;
+import de.tub.aot.common.models.TrafficLightId;
 
 @RegisterRestClient(configKey = "traffic-light-api")
 @OidcClientFilter
@@ -23,4 +24,8 @@ public interface TrafficStatusLightClient {
     @GET
     @Path("/api/device/traffic-state")
     TrafficStatus getState(@QueryParam("vehicle") Boolean vehicle);
+
+    @GET
+    @Path("/api/device/traffic-lights")
+    ArrayList<TrafficLightId> getLights();
 }

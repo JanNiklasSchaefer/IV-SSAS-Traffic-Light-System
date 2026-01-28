@@ -25,23 +25,11 @@ class TrafficLightIdTest {
         GPSCoordinate lon = createDuckburgLongitude();
         UUID uuid = UUID.randomUUID();
 
-        TrafficLightId id = new TrafficLightId(lat, lon, uuid);
+        TrafficLightId id = new TrafficLightId(lat, lon, uuid, "north-south");
 
         assertEquals(lat, id.getLatitude());
         assertEquals(lon, id.getLongitude());
         assertEquals(uuid, id.getUuid());
-    }
-
-    @Test
-    void testCreateTrafficLightIdWithGeneratedUUID() {
-        GPSCoordinate lat = createDuckburgLatitude();
-        GPSCoordinate lon = createDuckburgLongitude();
-
-        TrafficLightId id = new TrafficLightId(lat, lon);
-
-        assertNotNull(id.getUuid());
-        assertEquals(lat, id.getLatitude());
-        assertEquals(lon, id.getLongitude());
     }
 
     @Test
@@ -50,7 +38,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(null, lon, uuid);
+            new TrafficLightId(null, lon, uuid,"north-south");
         });
     }
 
@@ -60,7 +48,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, null, uuid);
+            new TrafficLightId(lat, null, uuid,"north-south");
         });
     }
 
@@ -70,7 +58,7 @@ class TrafficLightIdTest {
         GPSCoordinate lon = createDuckburgLongitude();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, lon, null);
+            new TrafficLightId(lat, lon, null,"north-south");
         });
     }
 
@@ -81,7 +69,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, lon, uuid);
+            new TrafficLightId(lat, lon, uuid,"north-south");
         });
     }
 
@@ -96,7 +84,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, lon, uuid);
+            new TrafficLightId(lat, lon, uuid,"north-south");
         });
     }
 
@@ -107,7 +95,7 @@ class TrafficLightIdTest {
         GPSCoordinate lon = new GPSCoordinate(-121, 30, 0.0, false);
         UUID uuid = UUID.randomUUID();
 
-        TrafficLightId id = new TrafficLightId(lat, lon, uuid);
+        TrafficLightId id = new TrafficLightId(lat, lon, uuid,"north-south");
         assertNotNull(id);
     }
 
@@ -119,7 +107,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, lon, uuid);
+            new TrafficLightId(lat, lon, uuid,"north-south");
         });
     }
 
@@ -131,7 +119,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, lon, uuid);
+            new TrafficLightId(lat, lon, uuid, "north-south");
         });
     }
 
@@ -143,7 +131,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, lon, uuid);
+            new TrafficLightId(lat, lon, uuid,"north-south");
         });
     }
 
@@ -155,7 +143,7 @@ class TrafficLightIdTest {
         UUID uuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new TrafficLightId(lat, lon, uuid);
+            new TrafficLightId(lat, lon, uuid,"north-south");
         });
     }
 
@@ -164,7 +152,7 @@ class TrafficLightIdTest {
         GPSCoordinate lat = createDuckburgLatitude();
         GPSCoordinate lon = createDuckburgLongitude();
         UUID uuid = UUID.randomUUID();
-        TrafficLightId id = new TrafficLightId(lat, lon, uuid);
+        TrafficLightId id = new TrafficLightId(lat, lon, uuid,"north-south");
 
         // Try to set invalid latitude
         GPSCoordinate invalidLat = new GPSCoordinate(39, 0, 0.0, true);
@@ -181,7 +169,7 @@ class TrafficLightIdTest {
         GPSCoordinate lat = createDuckburgLatitude();
         GPSCoordinate lon = createDuckburgLongitude();
         UUID uuid = UUID.randomUUID();
-        TrafficLightId id = new TrafficLightId(lat, lon, uuid);
+        TrafficLightId id = new TrafficLightId(lat, lon, uuid,"north-south");
 
         // Try to set invalid longitude
         GPSCoordinate invalidLon = new GPSCoordinate(-119, 0, 0.0, false);
@@ -198,7 +186,7 @@ class TrafficLightIdTest {
         GPSCoordinate lat = createDuckburgLatitude();
         GPSCoordinate lon = createDuckburgLongitude();
         UUID uuid = UUID.randomUUID();
-        TrafficLightId id = new TrafficLightId(lat, lon, uuid);
+        TrafficLightId id = new TrafficLightId(lat, lon, uuid,"north-south");
 
         assertThrows(IllegalArgumentException.class, () -> {
             id.setUuid(null);
@@ -210,7 +198,7 @@ class TrafficLightIdTest {
         GPSCoordinate lat = createDuckburgLatitude();
         GPSCoordinate lon = createDuckburgLongitude();
         UUID uuid = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
-        TrafficLightId id = new TrafficLightId(lat, lon, uuid);
+        TrafficLightId id = new TrafficLightId(lat, lon, uuid,"north-south");
 
         String str = id.toString();
         assertTrue(str.contains("TrafficLightId"));
@@ -223,9 +211,9 @@ class TrafficLightIdTest {
         GPSCoordinate lon = createDuckburgLongitude();
         UUID uuid = UUID.randomUUID();
 
-        TrafficLightId id1 = new TrafficLightId(lat, lon, uuid);
-        TrafficLightId id2 = new TrafficLightId(lat, lon, uuid);
-        TrafficLightId id3 = new TrafficLightId(lat, lon, UUID.randomUUID());
+        TrafficLightId id1 = new TrafficLightId(lat, lon, uuid,"north-south");
+        TrafficLightId id2 = new TrafficLightId(lat, lon, uuid,"north-south");
+        TrafficLightId id3 = new TrafficLightId(lat, lon, UUID.randomUUID(),"north-south");
 
         assertEquals(id1, id2);
         assertNotEquals(id1, id3);
@@ -237,8 +225,8 @@ class TrafficLightIdTest {
         GPSCoordinate lon = createDuckburgLongitude();
         UUID uuid = UUID.randomUUID();
 
-        TrafficLightId id1 = new TrafficLightId(lat, lon, uuid);
-        TrafficLightId id2 = new TrafficLightId(lat, lon, uuid);
+        TrafficLightId id1 = new TrafficLightId(lat, lon, uuid,"north-south");
+        TrafficLightId id2 = new TrafficLightId(lat, lon, uuid,"north-south");
 
         assertEquals(id1.hashCode(), id2.hashCode());
     }
@@ -248,8 +236,8 @@ class TrafficLightIdTest {
         GPSCoordinate lat = createDuckburgLatitude();
         GPSCoordinate lon = createDuckburgLongitude();
 
-        TrafficLightId id1 = new TrafficLightId(lat, lon, UUID.randomUUID());
-        TrafficLightId id2 = new TrafficLightId(lat, lon, UUID.randomUUID());
+        TrafficLightId id1 = new TrafficLightId(lat, lon, UUID.randomUUID(),"north-south");
+        TrafficLightId id2 = new TrafficLightId(lat, lon, UUID.randomUUID(),"north-south");
 
         assertNotEquals(id1, id2);
     }

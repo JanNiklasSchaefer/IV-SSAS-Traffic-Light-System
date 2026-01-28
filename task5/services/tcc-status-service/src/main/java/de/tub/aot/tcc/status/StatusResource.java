@@ -1,6 +1,7 @@
 package de.tub.aot.tcc.status;
 
 import de.tub.aot.common.models.TrafficStatus;
+import de.tub.aot.common.models.TrafficLightId;
 import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -14,6 +15,8 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import de.tub.aot.timeservice.TimeValidationResponse;
 import de.tub.aot.timeservice.TimeValidationRequest;
+import java.util.ArrayList;
+
 
 
 @Path("/api/status")
@@ -50,5 +53,15 @@ public class StatusResource {
         status.setState("yellow");
         status.setTimestamp("2024-01-01T12:00:00Z");
         return status;
+    }
+
+    @GET
+    @Path("/traffic-lights")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center" })
+    public ArrayList<TrafficLightId> getTrafficLights() {
+        ArrayList<TrafficLightId> lights = lightClient.getLights();
+
+        return lights;
     }
 }
