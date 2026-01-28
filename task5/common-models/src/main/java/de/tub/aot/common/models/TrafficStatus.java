@@ -1,7 +1,5 @@
 package de.tub.aot.common.models;
-
-import java.util.Map;
-import java.util.HashMap;
+import java.time.Instant;
 
 /**
  * Describes the current state of a traffic light.
@@ -13,20 +11,19 @@ import java.util.HashMap;
 public class TrafficStatus {
 
     private TrafficLightId trafficLightId;
-    private String timestamp;
+    private Instant timestamp;
     private String state; // Overall state (for backward compatibility)
     // Map for individual lights at an intersection: direction -> state
     // e.g., "north-south" -> "green", "east-west" -> "red"
-    private Map<String, String> lightStates;
+    private String pedestrianState;
 
-    public TrafficStatus() {
-        this.lightStates = new HashMap<>();
-    }
-
-    public TrafficStatus(TrafficLightId trafficLightId, String timestamp) {
-        this();
+    public TrafficStatus(TrafficLightId trafficLightId, Instant timestamp, String state) {
         this.trafficLightId = trafficLightId;
         this.timestamp = timestamp;
+        this.state = state;
+        if(state.equals("green")) this.pedestrianState = "red";
+        if(state.equals("yellow")) this.pedestrianState = "yellow";
+        if(state.equals("red")) this.pedestrianState = "green";
     }
 
     public TrafficLightId getTrafficLightId() {
@@ -37,12 +34,16 @@ public class TrafficStatus {
         this.trafficLightId = trafficLightId;
     }
 
-    public String getTimestamp() {
+    public Instant getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(String timestamp) {
+    public void setTimestamp(Instant timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public String getPedestrianState(){
+        return this.pedestrianState;
     }
 
     /**
@@ -61,45 +62,8 @@ public class TrafficStatus {
      */
     public void setState(String state) {
         this.state = state;
-    }
-
-    /**
-     * Gets the status map for individual lights at an intersection.
-     * Key: direction (e.g., "north-south", "east-west")
-     * Value: state (e.g., "green", "yellow", "red")
-     * 
-     * @return map of direction to state
-     */
-    public Map<String, String> getLightStates() {
-        return lightStates;
-    }
-
-    /**
-     * Sets the status map for individual lights at an intersection.
-     * 
-     * @param lightStates map of direction to state
-     */
-    public void setLightStates(Map<String, String> lightStates) {
-        this.lightStates = lightStates != null ? lightStates : new HashMap<>();
-    }
-
-    /**
-     * Adds or updates the state for a specific direction.
-     * 
-     * @param direction direction (e.g., "north-south", "east-west")
-     * @param state     state (e.g., "green", "yellow", "red")
-     */
-    public void setLightState(String direction, String state) {
-        this.lightStates.put(direction, state);
-    }
-
-    /**
-     * Gets the state for a specific direction.
-     * 
-     * @param direction direction (e.g., "north-south", "east-west")
-     * @return state or null if not set
-     */
-    public String getLightState(String direction) {
-        return this.lightStates.get(direction);
+        if(state.equals("green")) this.pedestrianState = "red";
+        if(state.equals("yellow")) this.pedestrianState = "yellow";
+        if(state.equals("red")) this.pedestrianState = "green";
     }
 }

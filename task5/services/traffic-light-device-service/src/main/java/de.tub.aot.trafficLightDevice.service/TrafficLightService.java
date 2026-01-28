@@ -3,6 +3,7 @@ package de.tub.aot.trafficLightDevice.service;
 import de.tub.aot.common.models.TrafficStatus;
 
 import java.util.ArrayList;
+import java.time.Instant;
 
 import de.tub.aot.common.models.GPSCoordinate;
 import de.tub.aot.common.models.TrafficLightId;
@@ -18,7 +19,12 @@ import jakarta.ws.rs.Consumes;
 import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
 import java.util.UUID;
+
+import org.eclipse.microprofile.openapi.models.parameters.Parameter.In;
+
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+
 import jakarta.annotation.PostConstruct;
 
 @Path("/api/device")
@@ -26,8 +32,18 @@ import jakarta.annotation.PostConstruct;
 @DenyAll
 public class TrafficLightService {
 
-    ArrayList<TrafficLightId> trafficLights = new ArrayList<TrafficLightId>();
+    ArrayList<TrafficLightId> trafficLightIdArray = new ArrayList<TrafficLightId>();
+    ArrayList<TrafficStatus> TrafficStatus = new ArrayList<TrafficStatus>();
 
+    TrafficLightId trafficLightNorth;
+    TrafficLightId trafficLightSouth;
+    TrafficLightId trafficLightEast;
+    TrafficLightId trafficLightWest;
+
+    TrafficStatus northStatus;
+    TrafficStatus southStatus;
+    TrafficStatus westStatus;
+    TrafficStatus eastStatus;
 
     @PostConstruct
     void init(){
@@ -46,30 +62,37 @@ public class TrafficLightService {
     GPSCoordinate longitudeNorth = new GPSCoordinate(-121, 15, 0.0, false);
     String key = "north"; 
     UUID id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    TrafficLightId trafficLightNorth = new TrafficLightId(lattitudeNorth, longitudeNorth, id, "north-south");
+    trafficLightNorth = new TrafficLightId(lattitudeNorth, longitudeNorth, id, "north-south");
 
     GPSCoordinate lattitudeSouth = new GPSCoordinate(37, 30, 0.0, true);
     GPSCoordinate longitudeSouth = new GPSCoordinate(-121, 45, 0.0, false);
     key = "south"; 
     id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    TrafficLightId trafficLightSouth = new TrafficLightId(lattitudeSouth, longitudeSouth, id, "south-north");
+    trafficLightSouth = new TrafficLightId(lattitudeSouth, longitudeSouth, id, "south-north");
 
     GPSCoordinate lattitudeWest = new GPSCoordinate(37, 15, 0.0, true);
     GPSCoordinate longitudeWest = new GPSCoordinate(-121, 30, 0.0, false);
     key = "west"; 
     id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    TrafficLightId trafficLightWest = new TrafficLightId(lattitudeWest, longitudeWest,id,"west-east");
+    trafficLightWest = new TrafficLightId(lattitudeWest, longitudeWest, id,"west-east");
 
     GPSCoordinate lattitudeEast = new GPSCoordinate(37, 45, 0.0, true);
     GPSCoordinate longitudeEast = new GPSCoordinate(-121, 30, 0.0, false);
     key = "east"; 
     id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    TrafficLightId trafficLightEast = new TrafficLightId(lattitudeEast, longitudeEast,id, "east-west");
+    trafficLightEast = new TrafficLightId(lattitudeEast, longitudeEast, id, "east-west");
 
-    trafficLights.add(trafficLightNorth);
-    trafficLights.add(trafficLightSouth);
-    trafficLights.add(trafficLightWest);
-    trafficLights.add(trafficLightEast);
+    trafficLightIdArray.add(trafficLightNorth);
+    trafficLightIdArray.add(trafficLightSouth);
+    trafficLightIdArray.add(trafficLightWest);
+    trafficLightIdArray.add(trafficLightEast);
+    
+    Instant initializingtTimer = Instant.now();
+
+    northStatus = new TrafficStatus(trafficLightNorth, initializingtTimer,"red");
+    southStatus = new TrafficStatus(trafficLightSouth, initializingtTimer,"red");
+    westStatus = new TrafficStatus(trafficLightEast, initializingtTimer, "green");
+    eastStatus = new TrafficStatus(trafficLightEast, initializingtTimer, "green");
     }
 
 
@@ -78,16 +101,8 @@ public class TrafficLightService {
     @Path("/traffic-state")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
-    public TrafficStatus getTrafficState(@QueryParam("vehicle") Boolean vehicle) {
-        TrafficStatus status = new TrafficStatus();
-        if(vehicle){
-            status.setState("green");
-            status.setTimestamp("2024-01-01T12:00:00Z");
-        }
-        else{
-            status.setState("red");
-            status.setTimestamp("2024-01-01T12:00:00Z");
-        }
+    public TrafficStatus getTrafficState() {
+        TrafficStatus status = northStatus;
         return status;
     }
 
@@ -97,14 +112,16 @@ public class TrafficLightService {
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "tcc-state-controller-light-service", "tcc-status-service-light-service" })
     public Response changeState(@QueryParam("state") String currentState) {
-
-        TrafficStatus newStatus = new TrafficStatus();
+        Instant timer = Instant.now();
+        TrafficStatus newStatus = northStatus;
         if ("green".equals(currentState)) {
             newStatus.setState("green");
-        } else
+            newStatus.setTimestamp(timer);
+        } else{
             newStatus.setState("red");
+            newStatus.setTimestamp(timer);
+        }
 
-        newStatus.setTimestamp("2024-01-02T12:00:00Z");
         return Response.ok(newStatus).build();
     }
 
@@ -113,6 +130,6 @@ public class TrafficLightService {
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
     public ArrayList<TrafficLightId> trafficLights() {
-        return trafficLights;
+        return trafficLightIdArray;
     }
 }

@@ -84,6 +84,18 @@ curl -v -X POST \
   -d '{}' \
   "https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443/api/device/change-state?state=green"
 ```
+### Call Get Traffic Lights 
+
+```bash
+curl -v -X GET \
+  --cacert /etc/tls/ca.crt \
+  --cert /etc/tls/tls.crt \
+  --key /etc/tls/tls.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  "https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443/api/device/traffic-lights"
+```
 
 ### Call: Audit – Create Event
 

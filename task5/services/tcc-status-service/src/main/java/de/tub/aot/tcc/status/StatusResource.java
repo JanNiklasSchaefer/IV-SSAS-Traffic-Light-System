@@ -16,6 +16,7 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import de.tub.aot.timeservice.TimeValidationResponse;
 import de.tub.aot.timeservice.TimeValidationRequest;
 import java.util.ArrayList;
+import java.time.Instant;
 
 
 
@@ -36,23 +37,21 @@ public class StatusResource {
     @Path("/traffic")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center" })
-    public TrafficStatus getTrafficStatus(@QueryParam("vehicle") Boolean vehicle) {
+    public TrafficStatus getTrafficStatus() {
         // TODO: Implementierung - intern TrafficLightDeviceService aufrufen
         // TODO: Neue Datenstrukturen verwenden (TrafficLightId, lightStates)
         // TODO: Status einer Kreuzung mit allen Ampeln zurückgeben
 
-        TrafficStatus status = new TrafficStatus();
         try{
-            status = lightClient.getState(vehicle);
+            TrafficStatus status = lightClient.getTrafficState();
             System.out.println("response:" + status);
             return status;
         }
         catch (Exception e) {
             System.err.println("Call failed: " + e.getMessage());
         }
-        status.setState("yellow");
-        status.setTimestamp("2024-01-01T12:00:00Z");
-        return status;
+
+        return new TrafficStatus(null, Instant.now(), "yellow");
     }
 
     @GET

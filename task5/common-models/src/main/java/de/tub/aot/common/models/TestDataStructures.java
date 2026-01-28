@@ -32,16 +32,11 @@ public class TestDataStructures {
 
             // Test 3: TrafficStatus erstellen
             System.out.println("3. Test: TrafficStatus erstellen");
-            TrafficStatus status = new TrafficStatus(lightId, Instant.now().toString());
+            TrafficStatus status = new TrafficStatus(lightId, Instant.now(), "red");
             status.setState("green");
-            status.setLightState("north-south", "green");
-            status.setLightState("east-west", "red");
             System.out.println("   TrafficLightId: " + status.getTrafficLightId());
             System.out.println("   Timestamp: " + status.getTimestamp());
             System.out.println("   Overall State: " + status.getState());
-            System.out.println("   North-South: " + status.getLightState("north-south"));
-            System.out.println("   East-West: " + status.getLightState("east-west"));
-            System.out.println("   All Light States: " + status.getLightStates());
             System.out.println("   ✅ TrafficStatus funktioniert!\n");
 
             // Test 4: Validierung - außerhalb von Duckburg (sollte fehlschlagen)

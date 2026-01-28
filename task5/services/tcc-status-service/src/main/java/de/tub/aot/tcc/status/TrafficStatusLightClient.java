@@ -23,7 +23,8 @@ public interface TrafficStatusLightClient {
     // TODO: Add Other Client Endpoints to reach services internally
     @GET
     @Path("/api/device/traffic-state")
-    TrafficStatus getState(@QueryParam("vehicle") Boolean vehicle);
+    TrafficStatus getTrafficState();
+
 
     @GET
     @Path("/api/device/traffic-lights")
