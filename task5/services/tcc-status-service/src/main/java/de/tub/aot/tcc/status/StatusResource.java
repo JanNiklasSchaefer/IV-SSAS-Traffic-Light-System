@@ -17,6 +17,7 @@ import de.tub.aot.timeservice.TimeValidationResponse;
 import de.tub.aot.timeservice.TimeValidationRequest;
 import java.util.ArrayList;
 import java.time.Instant;
+import java.util.UUID;
 
 
 
@@ -37,13 +38,13 @@ public class StatusResource {
     @Path("/traffic")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center" })
-    public TrafficStatus getTrafficStatus() {
+    public TrafficStatus getTrafficStatus(@QueryParam("traffic-light-id") UUID trafficLightId) {
         // TODO: Implementierung - intern TrafficLightDeviceService aufrufen
         // TODO: Neue Datenstrukturen verwenden (TrafficLightId, lightStates)
         // TODO: Status einer Kreuzung mit allen Ampeln zurückgeben
 
         try{
-            TrafficStatus status = lightClient.getTrafficState();
+            TrafficStatus status = lightClient.getTrafficState(trafficLightId);
             System.out.println("response:" + status);
             return status;
         }

@@ -18,7 +18,28 @@ curl -v -X GET \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}' \
-  "https://tcc.test/api/status/traffic?vehicle=true"
+  "https://tcc.test/api/status/traffic?traffic-light-id=320381db-f7cd-3f31-804b-aa6b36e1c682"
+```
+
+
+### north-south
+```
+8d8d1437-907b-3a79-900a-c5f0ea1f5c73
+```
+
+### south-north
+```
+50fd76e3-3fe5-3961-bc5c-a99008af8904
+```
+### west-east
+```
+da4f0053-a5c1-3882-a688-52ae2da2e466
+```
+
+### east-west
+
+```
+320381db-f7cd-3f31-804b-aa6b36e1c682
 ```
 
 ## test priority
@@ -33,6 +54,20 @@ curl -v -X POST \
   -d '{"vehicleType":"emergency"}' \
   "https://tcc.test/api/priority/requests"
 ```
+
+## test traffic lights
+
+```
+curl -v -X GET \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  "https://tcc.test/api/status/traffic-lights"
+```
+
   ## redeploy a single service example call:
 
 
