@@ -21,8 +21,10 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.UUID;
 
 @Path("/api/priority")
@@ -33,6 +35,10 @@ public class PriorityResource {
     private static final Logger LOG = Logger.getLogger(PriorityResource.class);
 
     private Map<String, RequestStatus> requestStore = new HashMap<>();
+    private Map<String, String> activeRequestsByVehicle = new HashMap<>();
+
+    // Priority Queue and Comparator
+    private PriorityQueue<QueuedRequest> requestQueue;
 
     @Inject
     @RestClient
@@ -50,18 +56,80 @@ public class PriorityResource {
     @RestClient
     PriorityAuditService auditClient;
 
+    public PriorityResource() {
+        Comparator<QueuedRequest> comparator = (r1, r2) -> {
+            int p1 = getPriority(r1.request.getVehicleType());
+            int p2 = getPriority(r2.request.getVehicleType());
+            // Lower value means higher priority (1 < 2 < 3)
+            if (p1 != p2)
+                return Integer.compare(p1, p2);
+            // FIFO for same priority
+            return Long.compare(r1.timestamp, r2.timestamp);
+        };
+        this.requestQueue = new PriorityQueue<>(comparator);
+    }
+
+    private int getPriority(String type) {
+        if ("emergency-vehicle".equals(type))
+            return 1;
+        if ("mayor-vehicle".equals(type))
+            return 2;
+        return 3; // Other
+    }
+
+    private static class QueuedRequest {
+        String requestId;
+        PriorityRequest request;
+        long timestamp;
+
+        QueuedRequest(String requestId, PriorityRequest request) {
+            this.requestId = requestId;
+            this.request = request;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+
     @POST
     @Path("/requests")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "traffic-management-center" })
     public PriorityResponse createPriorityRequest(PriorityRequest request) {
+        String vehicleId = request.getVehicleId();
+
+        if (vehicleId != null && activeRequestsByVehicle.containsKey(vehicleId)) {
+            return new PriorityResponse("denied", "already_active_request");
+        }
+
         String requestId = UUID.randomUUID().toString();
-        String status = "accepted";
 
-        LOG.info("=== Priority Request received: " + requestId + " ===");
+        if (vehicleId != null) {
+            activeRequestsByVehicle.put(vehicleId, requestId);
+        }
 
-        // 1. Time Service aufrufen - Timestamp validieren
+        LOG.info("=== Priority Request queued: " + requestId + " ===");
+
+        requestQueue.add(new QueuedRequest(requestId, request));
+        requestStore.put(requestId, new RequestStatus(requestId, "queued", request.getVehicleType()));
+
+        processNextRequest();
+
+        return new PriorityResponse("queued", requestId);
+    }
+
+    private synchronized void processNextRequest() {
+        if (requestQueue.isEmpty())
+            return;
+
+        // Process head of queue
+        QueuedRequest queuedReq = requestQueue.poll();
+        String requestId = queuedReq.requestId;
+        PriorityRequest request = queuedReq.request;
+
+        LOG.info("=== Processing request: " + requestId + " ===");
+        requestStore.put(requestId, new RequestStatus(requestId, "processing", request.getVehicleType()));
+
+        // 1. Time Service
         LOG.info("Calling Time Service...");
         try {
             TimeValidationRequest timeRequest = new TimeValidationRequest(Instant.now().toEpochMilli());
@@ -71,23 +139,19 @@ public class PriorityResource {
             LOG.warn("Time Service call failed: " + e.getMessage());
         }
 
-        // 2. Location Validator aufrufen - Vehicle Location validieren
-        // Beispiel: LocationValidationRequest würde vehicleId und coordinates benötigen
-        // Hier nur als Beispiel - in echter Implementierung würde das vom Request
-        // kommen
+        // 2. Location Validator
         LOG.info("Calling Location Validator...");
         try {
             LocationValidationRequest locationRequest = new LocationValidationRequest(
                     "vehicle-" + requestId,
-                    null // Coordinates würden hier gesetzt werden
-            );
+                    null);
             LocationValidationResponse locationResponse = locationClient.validateVehicleLocation(locationRequest);
             LOG.info("Location Validator Response: " + (locationResponse != null ? "OK" : "NULL"));
         } catch (Exception e) {
-            LOG.warn("Location validation failed (expected if coordinates not set): " + e.getMessage());
+            LOG.warn("Location validation failed: " + e.getMessage());
         }
 
-        // 3. State Controller aufrufen - State Change anstoßen
+        // 3. State Controller
         LOG.info("Calling State Controller...");
         try {
             StateChangeRequest stateRequest = new StateChangeRequest();
@@ -98,10 +162,10 @@ public class PriorityResource {
             LOG.warn("State Controller call failed: " + e.getMessage());
         }
 
-        // 4. Audit Service aufrufen - Event loggen
+        // 4. Audit Service
         LOG.info("Calling Audit Service...");
         try {
-            Response auditResponse = auditClient.logEvent("Priority request created: " + requestId);
+            Response auditResponse = auditClient.logEvent("Priority request processed: " + requestId);
             LOG.info("Audit Service Response: " + auditResponse.getStatus());
         } catch (Exception e) {
             LOG.warn("Audit Service call failed: " + e.getMessage());
@@ -109,10 +173,24 @@ public class PriorityResource {
 
         LOG.info("=== Priority Request processing completed: " + requestId + " ===");
 
-        RequestStatus requestStatus = new RequestStatus(requestId, "processing", request.getVehicleType());
-        requestStore.put(requestId, requestStatus);
+        requestStore.put(requestId, new RequestStatus(requestId, "accepted", request.getVehicleType()));
 
-        return new PriorityResponse(status, requestId);
+        if (request.getVehicleId() != null) {
+            activeRequestsByVehicle.remove(request.getVehicleId());
+        }
+
+        // Recursively process next if any?
+        // For now, let's keep it simple. If we want to drain the queue, we loop or call
+        // recursively.
+        // But the user pattern implies one-by-one triggering or async.
+        // Given current sync implementation, one call processes one item.
+        // If multiple come in parallel, they trigger multiple processNextRequest.
+        // With 'synchronized', they serialize.
+        // But if 5 items are in queue, and 1 finishes, who triggers the next?
+        // We should try to process more if available.
+        if (!requestQueue.isEmpty()) {
+            processNextRequest();
+        }
     }
 
     @GET
@@ -123,8 +201,6 @@ public class PriorityResource {
         RequestStatus status = requestStore.get(requestId);
 
         if (status == null) {
-            // Return a default status indicating not found
-            // In a real implementation, you might want to throw a NotFoundException
             return new RequestStatus(requestId, "NOT_FOUND", null);
         }
 

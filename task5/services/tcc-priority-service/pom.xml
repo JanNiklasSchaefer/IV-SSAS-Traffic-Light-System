@@ -84,6 +84,16 @@
          <scope>test</scope>
       </dependency>
       <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-test-security</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <groupId>io.quarkus</groupId>
+         <artifactId>quarkus-junit5-mockito</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
          <groupId>io.netty</groupId>
          <artifactId>netty-resolver-dns-native-macos</artifactId>
          <scope>runtime</scope>
