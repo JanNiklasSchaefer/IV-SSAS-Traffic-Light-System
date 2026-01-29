@@ -1,7 +1,5 @@
 package de.tub.aot.trafficLightDevice.service;
 
-import de.tub.aot.common.models.TrafficStatus;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,6 +7,8 @@ import java.time.Instant;
 
 import de.tub.aot.common.models.GPSCoordinate;
 import de.tub.aot.common.models.TrafficLightId;
+import de.tub.aot.common.models.TrafficStatus;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -29,10 +29,16 @@ import java.time.Instant;
 
 import jakarta.annotation.PostConstruct;
 
+import org.jboss.logging.Logger;
+
+
 @Path("/api/device")
 @ApplicationScoped
 @DenyAll
 public class TrafficLightService {
+    //Activate Loggin
+    private static final Logger LOG = Logger.getLogger(TrafficLightService.class);
+
 
     ArrayList<TrafficLightId> trafficLightIdArray = new ArrayList<TrafficLightId>();
     ArrayList<TrafficStatus> TrafficStatus = new ArrayList<TrafficStatus>();
@@ -112,6 +118,7 @@ public class TrafficLightService {
     this.trafficLightMap.put(this.eastTrafficLight.getUuid(),this.eastStatus);
     this.trafficLightMap.put(this.westTrafficLight.getUuid(),this.westStatus);
     }
+    // TODO. Add Audit Functionality
 
     @GET
     @Path("/traffic-state")
@@ -133,8 +140,8 @@ public class TrafficLightService {
         // First set intersection to yellow for a few seconds and wait for traffic to clear 
         for(TrafficStatus status : this.trafficLightMap.values()){
             // Check for illegal states before starting a swap. 
-            if(!status.getState().equals("green") || !status.getState().equals("red")){
-                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+            if(!status.getState().equals("green") && !status.getState().equals("red")){
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                .entity("Illegal Traffic Light State or State Change Request requested while changing already.")
                .type("text/plain")
                .build();
@@ -172,10 +179,110 @@ public class TrafficLightService {
         return Response.ok().build();
     }
 
+    @POST
+    @Path("/management/change-state")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed({ "tcc-state-controller-light-service"})
+    public Response changeManagementCenterState(TrafficStatus goalStatus) {
+
+        if(!goalStatus.getState().equals("red") && !goalStatus.getState().equals("green")){
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+               .entity("Illegal Traffic Light Goal State. Management Center can only change to `green` or `red`. State was : " + goalStatus.getState())
+               .type("text/plain")
+               .build();
+        }
+
+        LOG.info("Iterating over Traffic Status Field and setting to yellow");
+        // First set intersection to yellow for a few seconds and wait for traffic to clear 
+        for(TrafficStatus status : this.trafficLightMap.values()){
+            // Check for illegal states before starting a swap. 
+            Instant timer = Instant.now();
+            status.setTimestamp(timer);
+            status.setState("yellow");
+        }
+
+        LOG.info("Sleeping for 3 Seconds");
+        // Wait for traffic intersection to clear
+        try {
+        Thread.sleep(3000); // 3 seconds
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // restore interrupt flag
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();        
+            }
+        
+        //Depending on Location of Device. We decide how to change traffic state
+        
+        //If we want to swap north or south traffic light do this tree
+        if(goalStatus.getTrafficLightId().getUuid().equals(this.northId) || goalStatus.getTrafficLightId().getUuid().equals(this.southId)){
+            LOG.info("Swapping north + south to goal state");
+            //Set North + south to goal status 
+            TrafficStatus status = this.trafficLightMap.get(this.northId);
+            status.setState(goalStatus.getState());
+            status.setTimestamp(Instant.now());
+
+            status = this.trafficLightMap.get(this.southId);
+            status.setState(goalStatus.getState());
+            status.setTimestamp(Instant.now());
+
+            if(goalStatus.getState().equals("red")){
+                status = this.trafficLightMap.get(this.eastId);
+                status.setState("green");
+                status.setTimestamp(Instant.now());
+
+                status = this.trafficLightMap.get(this.westId);
+                status.setState("green");
+                status.setTimestamp(Instant.now());
+            }
+            if(goalStatus.getState().equals("green")){
+                status = this.trafficLightMap.get(this.eastId);
+                status.setState("red");
+                status.setTimestamp(Instant.now());
+
+                status = this.trafficLightMap.get(this.westId);
+                status.setState("red");
+                status.setTimestamp(Instant.now());
+            }
+        }
+        //If we want to swap east or west traffic light do this tree
+        if(goalStatus.getTrafficLightId().getUuid().equals(this.eastId) || goalStatus.getTrafficLightId().getUuid().equals(this.westId)){
+            //Set WEst + east to goal status 
+            LOG.info("Swapping east + west to goal state");
+            TrafficStatus status = this.trafficLightMap.get(this.eastId);
+            status.setState(goalStatus.getState());
+            status.setTimestamp(Instant.now());
+
+            status = this.trafficLightMap.get(this.westId);
+            status.setState(goalStatus.getState());
+            status.setTimestamp(Instant.now());
+
+            if(goalStatus.getState().equals("red")){
+                status = this.trafficLightMap.get(this.northId);
+                status.setState("green");
+                status.setTimestamp(Instant.now());
+
+                status = this.trafficLightMap.get(this.southId);
+                status.setState("green");
+                status.setTimestamp(Instant.now());
+            }
+            if(goalStatus.getState().equals("green")){
+                status = this.trafficLightMap.get(this.northId);
+                status.setState("red");
+                status.setTimestamp(Instant.now());
+
+                status = this.trafficLightMap.get(this.southId);
+                status.setState("red");
+                status.setTimestamp(Instant.now());
+            }
+        }
+        
+        return Response.ok().build();
+    }
+
     @GET
     @Path("/traffic-lights")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"tcc-status-service-light-service"})
+    @RolesAllowed({"tcc-status-service-light-service","tcc-state-controller-light-service"})
     public ArrayList<TrafficLightId> trafficLights() {
         return trafficLightIdArray;
     }

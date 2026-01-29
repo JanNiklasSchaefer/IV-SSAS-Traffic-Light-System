@@ -87,3 +87,47 @@ kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-status-service --tail=50
 ##  more general : 
 
 kubectl logs -n {namespace} {deployment name} --tail=50
+
+
+
+# Traffic Management Center Client test calls
+
+## get token call 
+
+```
+TOKEN=$(curl -s --cacert certs/ca.crt \
+  -d grant_type=client_credentials \
+  -d client_id=traffic-management-center-client\
+  -d client_secret=ZDpX2WcFPbSCuk2aDSIPI8DdJXa6PIQ7 \
+  https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+echo "LEN=${#TOKEN}"    
+```
+
+## get state call 
+
+```
+curl -v -X GET \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  "https://tcc.test/api/state/management/state"
+```
+
+
+## update state call 
+
+```
+curl -v -X PUT \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"trafficLightId":{"latitude":{"degrees":37,"minutes":30,"seconds":30.0,"latitude":true},"longitude":{"degrees":-121,"minutes":30,"seconds":29.0,"latitude":false},"uuid":"8d8d1437-907b-3a79-900a-c5f0ea1f5c73","direction":"north-south"},"timestamp": "1", "state":"green", "pedestrianState" :"red" }' \
+  "https://tcc.test/api/state/management/change-state"
+```
