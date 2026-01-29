@@ -10,6 +10,11 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import java.util.Scanner;
+import java.util.UUID;
+import java.util.ArrayList;
+
+import de.tub.aot.common.models.TrafficStatus;
+import de.tub.aot.common.models.TrafficLightId;
 
 /**
  * Simple demo client for the Mayor Vehicle.
@@ -30,13 +35,16 @@ public class MayorVehicleClient implements QuarkusApplication {
     // Dummy requestId for GET /api/priority/requests/{requestId}
     private static final String DUMMY_REQUEST_ID = "123e4567-e89b-12d3-a456-426614174000";
 
+    private static final UUID DUMMY_UUID = UUID.fromString("8d8d1437-907b-3a79-900a-c5f0ea1f5c73");
+
+
     @Inject
     @RestClient
     TccApiClient apiClient;
 
     @Override
     public int run(String... args) {
-        System.out.println("=== Pedestrian Client ===");
+        System.out.println("=== Mayor Vehicle Client ===");
         runInteractive();
         return 0;
     }
@@ -59,20 +67,17 @@ public class MayorVehicleClient implements QuarkusApplication {
 
                 try {
                     switch (command) {
-                        case "1" -> {
+                        case "1" -> callTrafficLightsEndpoint();
+                        case "2" -> {
                             if (parts.length != 2) {
                                 System.out.println(
                                         "ERROR: Missing Vehicle Boolean Input or too many Input Parameters. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
-                            } else if ((!parts[1].equals("true") && !parts[1].equals("false"))) {
-                                System.out.println(parts[1]);
-                                System.out.println(
-                                        "ERROR: Wrong Vehicle Boolean Input value. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
                             } else {
-                                callTrafficStatusEndpoint(Boolean.valueOf(parts[1]));
+                                callTrafficStatusEndpoint(UUID.fromString(parts[1]));
                             }
                         }
-                        case "2" -> callPriorityRequestEndpoint();
-                        case "3" -> {
+                        case "3" -> callPriorityRequestEndpoint();
+                        case "4" -> {
                             if (parts.length != 2) {
                                 System.out.println(
                                         "ERROR: Wrong Input. Correct Pattern: 3 <requestId>. Example Call: \n> 3 123e4567-e89b-12d3-a456-426614174000");
@@ -80,7 +85,8 @@ public class MayorVehicleClient implements QuarkusApplication {
                                 callRequestStatusEndpoint(parts[1]);
                             }
                         }
-                        case "4" -> runDemo();
+                        case "5" -> callIntersectionStatus();
+                        case "6" -> runDemo();
                         case "q", "quit", "exit" -> running = false;
                         default -> System.out.println("Unknown command: " + command);
                     }
@@ -95,28 +101,57 @@ public class MayorVehicleClient implements QuarkusApplication {
         System.out.println("""
 
                 === Menu ===
-                1 <Boolean>        → GET  /api/status/traffic?vehicle={Boolean}
-                2                  → POST /api/priority/requests
-                3 <requestId>      → GET  /api/priority/requests/{requestId}
-                4                  → Run a demo of all endpoints with dummy data.
+                1                  → GET  /api/status/traffic-lights
+                2 <UUID>           → GET  /api/status/traffic?traffic-light-id={UUID}
+                3                  → POST /api/priority/requests
+                4 <requestId>      → GET  /api/priority/requests/{requestId}
+                5                  → View full Intersection Status (combines options 1 + 2; no separate endpoint)
+                6                  → Run a demo of all endpoints with dummy data.
                 q                  → Quit
                 """);
     }
 
     private void runDemo() throws Exception {
-        System.out.println("=== Mayor Vehicle Client ===");
+        System.out.println("=== Emergency Vehicle Client ===");
         System.out.println("Using Quarkus REST Client");
 
         // EXTERNAL endpoints only (what the client is allowed to call)
-        callTrafficStatusEndpoint(true);
+        callTrafficLightsEndpoint();
+        callTrafficStatusEndpoint(DUMMY_UUID);
         callPriorityRequestEndpoint();
         callRequestStatusEndpoint(DUMMY_REQUEST_ID);
+        callIntersectionStatus();
 
         System.out.println("=== Demo finished ===");
     }
 
-    private void callTrafficStatusEndpoint(Boolean vehicle) throws Exception {
-        System.out.println("\n--- GET /api/status/traffic?vehicle=" + vehicle + "---");
+    private void callIntersectionStatus() throws Exception {
+        ArrayList<TrafficLightId> trafficLights = apiClient.getTrafficLights();
+        System.out.println("\n This Function is not a direct Endpoint, but a combination of Endpoint Calls.\n");
+        System.out.println("=== Intersection State: ===");
+        System.out.println("-----");
+        for(TrafficLightId id : trafficLights){
+            UUID uuid = id.getUuid();
+            TrafficStatus status = apiClient.getTrafficStatus(uuid);  
+            System.out.println("Traffic Light Direction: " + id.getDirection());
+            System.out.println("UUID: " + id.getUuid());
+            System.out.println("Vehicle State: " + status.getState());
+            System.out.println("Pedestrian State: " + status.getPedestrianState());
+            System.out.println("-----");
+        }
+    }
+
+    /**
+     * Calls:
+     * GET /api/status/traffic?vehicle=true
+     *
+     * According to your spec:
+     * - Type: External
+     * - Purpose: Get Traffic Status
+     * - Parameters: Query: vehicle (Boolean)
+     */
+    private void callTrafficStatusEndpoint(UUID vehicle) throws Exception {
+        System.out.println("\n--- GET /api/status/traffic?traffic-light-id=" + vehicle.toString() + "---");
 
         try {
             TrafficStatus status = apiClient.getTrafficStatus(vehicle);
@@ -125,6 +160,35 @@ public class MayorVehicleClient implements QuarkusApplication {
             System.out.println("Timestamp: " + status.getTimestamp());
         } catch (Exception e) {
             System.err.println("Error calling traffic status endpoint: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Calls:
+     * GET /api/status/traffic-lights
+     *
+     * According to your spec:
+     * - Type: External
+     * - Purpose: Get Traffic Status
+     * - Parameters: Query: vehicle (Boolean)
+     */
+    private void callTrafficLightsEndpoint() throws Exception {
+        System.out.println("\n--- GET /api/status/traffic-lights");
+
+        try {
+            ArrayList<TrafficLightId> statusList = apiClient.getTrafficLights();
+            System.out.println("Status: 200 OK");
+            System.out.println("---------");
+            for(TrafficLightId id : statusList){
+                System.out.println("Traffic Light UUID: " + id.getUuid());
+                System.out.println("Direction: " + id.getDirection());
+                System.out.println("Longitude Coordinate: " + id.getLongitude());
+                System.out.println("Lattitude Coordinate: " + id.getLatitude());
+                System.out.println("---------");
+            }
+        } catch (Exception e) {
+            System.err.println("Error calling traffic light devices endpoint: " + e.getMessage());
             throw e;
         }
     }

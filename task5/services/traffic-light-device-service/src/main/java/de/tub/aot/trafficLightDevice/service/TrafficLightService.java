@@ -58,11 +58,11 @@ public class TrafficLightService {
     void init(){
     // Create 4 Traffic Lights with UUID 
     /* Set Coordinates of Traffic Light so 
-    North is at: Lattitude: (east - west) 37.30 / longitude(north-south)121.45
-    South is at: Lattitude: (east - west) 37.30 / longitude(north-south)121.15
+    North is at: Lattitude: (east - west) 37.30.30 / longitude(north-south)-121.30.31
+    South is at: Lattitude: (east - west) 37.30.30 / longitude(north-south)-121.30.29
     
-    West is at: Lattitude: (east - west)37.15 / longitude(north-south) 121.30
-    East is at: Lattitude: (east - west)37.45 / longitude(north-south) 121.30
+    West is at: Lattitude: (east - west)37.30.29 / longitude(north-south) -121.30.30
+    East is at: Lattitude: (east - west)37.30.31 / longitude(north-south) -121.30.30
     
     So East - west Traffic light is in middle of longitude wise of South - North 
     And North-south is in middle lattitude wise of east-west
@@ -113,8 +113,6 @@ public class TrafficLightService {
     this.trafficLightMap.put(this.westTrafficLight.getUuid(),this.westStatus);
     }
 
-
-
     @GET
     @Path("/traffic-state")
     @Produces(MediaType.APPLICATION_JSON)
@@ -128,7 +126,7 @@ public class TrafficLightService {
     @Path("/change-state")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "tcc-state-controller-light-service", "tcc-status-service-light-service" })
+    @RolesAllowed({ "tcc-state-controller-light-service"})
     public Response changeState() {
 
         Map<UUID,String> previousStatesMap = new HashMap<UUID,String>();
@@ -177,7 +175,7 @@ public class TrafficLightService {
     @GET
     @Path("/traffic-lights")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
+    @RolesAllowed({"tcc-status-service-light-service"})
     public ArrayList<TrafficLightId> trafficLights() {
         return trafficLightIdArray;
     }
