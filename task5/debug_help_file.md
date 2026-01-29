@@ -81,8 +81,18 @@ mvn clean package -Dquarkus.kubernetes.deploy=true
 
 # checking logs of a service:
 
+### status service 
 
 kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-status-service --tail=50
+
+### state controller 
+
+kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-state-controller --tail=50
+
+### traffic light device
+
+kubectl logs -n gruppe8-traffic-light-devices deploy/gruppe8-traffic-light-device-service --tail=50
+
 
 ##  more general : 
 
@@ -128,6 +138,6 @@ curl -v -X PUT \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"trafficLightId":{"latitude":{"degrees":37,"minutes":30,"seconds":30.0,"latitude":true},"longitude":{"degrees":-121,"minutes":30,"seconds":29.0,"latitude":false},"uuid":"8d8d1437-907b-3a79-900a-c5f0ea1f5c73","direction":"north-south"},"timestamp": "1", "state":"green", "pedestrianState" :"red" }' \
+  -d '{"trafficLightId":{"latitude":{"degrees":37,"minutes":30,"seconds":30.0,"latitude":true},"longitude":{"degrees":-121,"minutes":30,"seconds":29.0,"latitude":false},"uuid":"8d8d1437-907b-3a79-900a-c5f0ea1f5c73","direction":"north-south"},"timestamp": "1", "state":"red", "pedestrianState" :"green" }' \
   "https://tcc.test/api/state/management/change-state"
 ```
