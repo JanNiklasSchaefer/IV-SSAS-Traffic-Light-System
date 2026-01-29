@@ -44,7 +44,7 @@ public class EmergencyVehicleClient implements QuarkusApplication {
 
     @Override
     public int run(String... args) {
-        System.out.println("=== Pedestrian Client ===");
+        System.out.println("=== Emergency Vehicle Client ===");
         runInteractive();
         return 0;
     }
