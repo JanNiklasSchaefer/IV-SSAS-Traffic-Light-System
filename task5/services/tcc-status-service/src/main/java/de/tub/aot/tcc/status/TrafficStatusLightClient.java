@@ -14,6 +14,7 @@ import io.quarkus.oidc.client.filter.OidcClientFilter;
 import de.tub.aot.common.models.TrafficStatus;
 import java.util.ArrayList;
 import de.tub.aot.common.models.TrafficLightId;
+import java.util.UUID;
 
 @RegisterRestClient(configKey = "traffic-light-api")
 @OidcClientFilter
@@ -23,7 +24,7 @@ public interface TrafficStatusLightClient {
     // TODO: Add Other Client Endpoints to reach services internally
     @GET
     @Path("/api/device/traffic-state")
-    TrafficStatus getTrafficState();
+    TrafficStatus getTrafficState(@QueryParam("traffic-light-id") UUID trafficLightId);
 
 
     @GET

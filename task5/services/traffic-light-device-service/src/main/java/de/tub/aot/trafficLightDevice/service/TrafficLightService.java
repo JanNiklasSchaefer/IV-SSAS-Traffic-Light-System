@@ -3,6 +3,8 @@ package de.tub.aot.trafficLightDevice.service;
 import de.tub.aot.common.models.TrafficStatus;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.time.Instant;
 
 import de.tub.aot.common.models.GPSCoordinate;
@@ -35,15 +37,22 @@ public class TrafficLightService {
     ArrayList<TrafficLightId> trafficLightIdArray = new ArrayList<TrafficLightId>();
     ArrayList<TrafficStatus> TrafficStatus = new ArrayList<TrafficStatus>();
 
-    TrafficLightId trafficLightNorth;
-    TrafficLightId trafficLightSouth;
-    TrafficLightId trafficLightEast;
-    TrafficLightId trafficLightWest;
+    TrafficLightId northTrafficLight;
+    TrafficLightId southTrafficLight;
+    TrafficLightId eastTrafficLight;
+    TrafficLightId westTrafficLight;
+
+    UUID northId;
+    UUID southId;
+    UUID westId;
+    UUID eastId;
 
     TrafficStatus northStatus;
     TrafficStatus southStatus;
     TrafficStatus westStatus;
     TrafficStatus eastStatus;
+
+    Map<UUID,TrafficStatus> trafficLightMap = new HashMap<UUID,TrafficStatus>();
 
     @PostConstruct
     void init(){
@@ -58,41 +67,50 @@ public class TrafficLightService {
     So East - west Traffic light is in middle of longitude wise of South - North 
     And North-south is in middle lattitude wise of east-west
     */ 
-    GPSCoordinate lattitudeNorth = new GPSCoordinate(37, 30, 0.0, true);
-    GPSCoordinate longitudeNorth = new GPSCoordinate(-121, 15, 0.0, false);
+    GPSCoordinate lattitudeNorth = new GPSCoordinate(37, 30, 30.0, true);
+    GPSCoordinate longitudeNorth = new GPSCoordinate(-121, 30, 29.0, false);
     String key = "north"; 
-    UUID id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    trafficLightNorth = new TrafficLightId(lattitudeNorth, longitudeNorth, id, "north-south");
+    this.northId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
+    this.northTrafficLight = new TrafficLightId(lattitudeNorth, longitudeNorth, this.northId, "north-south");
 
-    GPSCoordinate lattitudeSouth = new GPSCoordinate(37, 30, 0.0, true);
-    GPSCoordinate longitudeSouth = new GPSCoordinate(-121, 45, 0.0, false);
+    GPSCoordinate lattitudeSouth = new GPSCoordinate(37, 30, 30.0, true);
+    GPSCoordinate longitudeSouth = new GPSCoordinate(-121, 30, 31.0, false);
     key = "south"; 
-    id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    trafficLightSouth = new TrafficLightId(lattitudeSouth, longitudeSouth, id, "south-north");
+    this.southId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
+    this.southTrafficLight = new TrafficLightId(lattitudeSouth, longitudeSouth, this.southId, "south-north");
 
-    GPSCoordinate lattitudeWest = new GPSCoordinate(37, 15, 0.0, true);
-    GPSCoordinate longitudeWest = new GPSCoordinate(-121, 30, 0.0, false);
+    GPSCoordinate lattitudeWest = new GPSCoordinate(37, 30, 29.0, true);
+    GPSCoordinate longitudeWest = new GPSCoordinate(-121, 30, 30.0, false);
     key = "west"; 
-    id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    trafficLightWest = new TrafficLightId(lattitudeWest, longitudeWest, id,"west-east");
+    this.westId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
+    this.westTrafficLight = new TrafficLightId(lattitudeWest, longitudeWest, this.westId,"west-east");
 
-    GPSCoordinate lattitudeEast = new GPSCoordinate(37, 45, 0.0, true);
-    GPSCoordinate longitudeEast = new GPSCoordinate(-121, 30, 0.0, false);
+    GPSCoordinate lattitudeEast = new GPSCoordinate(37, 30, 31.0, true);
+    GPSCoordinate longitudeEast = new GPSCoordinate(-121, 30, 30.0, false);
     key = "east"; 
-    id = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
-    trafficLightEast = new TrafficLightId(lattitudeEast, longitudeEast, id, "east-west");
+    this.eastId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
+    this.eastTrafficLight = new TrafficLightId(lattitudeEast, longitudeEast, this.eastId, "east-west");
 
-    trafficLightIdArray.add(trafficLightNorth);
-    trafficLightIdArray.add(trafficLightSouth);
-    trafficLightIdArray.add(trafficLightWest);
-    trafficLightIdArray.add(trafficLightEast);
+    this.trafficLightIdArray.add(northTrafficLight);
+    this.trafficLightIdArray.add(southTrafficLight);
+    this.trafficLightIdArray.add(westTrafficLight);
+    this.trafficLightIdArray.add(eastTrafficLight);
     
     Instant initializingtTimer = Instant.now();
 
-    northStatus = new TrafficStatus(trafficLightNorth, initializingtTimer,"red");
-    southStatus = new TrafficStatus(trafficLightSouth, initializingtTimer,"red");
-    westStatus = new TrafficStatus(trafficLightEast, initializingtTimer, "green");
-    eastStatus = new TrafficStatus(trafficLightEast, initializingtTimer, "green");
+    //Create array for ease of use in the api endpoint. More storage space but makes calls faster.
+
+    this.northStatus = new TrafficStatus(northTrafficLight, initializingtTimer,"red");
+    this.southStatus = new TrafficStatus(southTrafficLight, initializingtTimer,"red");
+    this.westStatus = new TrafficStatus(westTrafficLight, initializingtTimer, "green");
+    this.eastStatus = new TrafficStatus(eastTrafficLight, initializingtTimer, "green");
+
+    // Create map for ease of use while implementing. Array would probably be faster in that size due to big O(1) but ease of implementation is prefered.
+
+    this.trafficLightMap.put(this.northTrafficLight.getUuid(),this.northStatus);
+    this.trafficLightMap.put(this.southTrafficLight.getUuid(),this.southStatus);
+    this.trafficLightMap.put(this.eastTrafficLight.getUuid(),this.eastStatus);
+    this.trafficLightMap.put(this.westTrafficLight.getUuid(),this.westStatus);
     }
 
 
@@ -101,8 +119,8 @@ public class TrafficLightService {
     @Path("/traffic-state")
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
-    public TrafficStatus getTrafficState() {
-        TrafficStatus status = northStatus;
+    public TrafficStatus getTrafficState(@QueryParam("traffic-light-id") UUID trafficLightId){
+        TrafficStatus status = this.trafficLightMap.get(trafficLightId);
         return status;
     }
 
@@ -111,18 +129,49 @@ public class TrafficLightService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "tcc-state-controller-light-service", "tcc-status-service-light-service" })
-    public Response changeState(@QueryParam("state") String currentState) {
-        Instant timer = Instant.now();
-        TrafficStatus newStatus = northStatus;
-        if ("green".equals(currentState)) {
-            newStatus.setState("green");
-            newStatus.setTimestamp(timer);
-        } else{
-            newStatus.setState("red");
-            newStatus.setTimestamp(timer);
+    public Response changeState() {
+
+        Map<UUID,String> previousStatesMap = new HashMap<UUID,String>();
+        // First set intersection to yellow for a few seconds and wait for traffic to clear 
+        for(TrafficStatus status : this.trafficLightMap.values()){
+            // Check for illegal states before starting a swap. 
+            if(!status.getState().equals("green") || !status.getState().equals("red")){
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+               .entity("Illegal Traffic Light State or State Change Request requested while changing already.")
+               .type("text/plain")
+               .build();
+            }
+            Instant timer = Instant.now();
+            previousStatesMap.put(status.getTrafficLightId().getUuid(), status.getState());
+            status.setTimestamp(timer);
+            status.setState("yellow");
         }
 
-        return Response.ok(newStatus).build();
+        // Wait for traffic intersection to clear
+        try {
+        Thread.sleep(3000); // 3 seconds
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // restore interrupt flag
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();        
+            }
+        
+        //Now go over all states again and swap to opposite of previous state
+        for(TrafficStatus status : this.trafficLightMap.values()){
+            UUID id = status.getTrafficLightId().getUuid();
+            String state = previousStatesMap.get(id);
+            if(state.equals("green")){
+                status.setState("red");
+            }
+            if(state.equals("red")){
+                status.setState("green");
+            }
+            //Set Timestamp
+            Instant timer = Instant.now();
+            status.setTimestamp(timer);
+        }
+        
+
+        return Response.ok().build();
     }
 
     @GET
