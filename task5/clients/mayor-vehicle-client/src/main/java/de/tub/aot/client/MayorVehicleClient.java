@@ -44,7 +44,7 @@ public class MayorVehicleClient implements QuarkusApplication {
 
     @Override
     public int run(String... args) {
-        System.out.println("=== Pedestrian Client ===");
+        System.out.println("=== Mayor Vehicle Client ===");
         runInteractive();
         return 0;
     }
