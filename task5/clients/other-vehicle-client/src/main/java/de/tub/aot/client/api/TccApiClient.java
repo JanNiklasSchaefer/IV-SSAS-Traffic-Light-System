@@ -2,6 +2,8 @@ package de.tub.aot.client.api;
 
 import de.tub.aot.common.models.TrafficStatus;
 import de.tub.aot.common.models.TrafficLightId;
+import de.tub.aot.common.models.PriorityRequest;
+import de.tub.aot.common.models.PriorityResponse;
 
 
 import io.quarkus.oidc.client.filter.OidcClientFilter;
@@ -24,7 +26,7 @@ public interface TccApiClient {
 
     @GET
     @Path("/api/priority/requests/{requestId}")
-    RequestStatus getRequestStatus(@PathParam("requestId") String requestId);
+    PriorityResponse getRequestStatus(@PathParam("requestId") String requestId);
 
     @GET
     @Path("/api/status/traffic")

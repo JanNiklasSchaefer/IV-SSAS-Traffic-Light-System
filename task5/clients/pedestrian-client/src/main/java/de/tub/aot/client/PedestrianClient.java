@@ -68,7 +68,7 @@ public class PedestrianClient implements QuarkusApplication {
                         case "2" -> {
                             if (parts.length != 2) {
                                 System.out.println(
-                                        "ERROR: Missing Vehicle Id Input or too many Input Parameters.");
+                                        "ERROR: Missing traffic-light-id Input or too many Input Parameters.");
                             } else {
                                 callTrafficStatusEndpoint(UUID.fromString(parts[1]));
                             }

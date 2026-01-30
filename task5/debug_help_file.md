@@ -51,7 +51,7 @@ curl -v -X POST \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency","vehicleId":"emergency_id_1","trafficLightId":"8d8d1437-907b-3a79-900a-c5f0ea1f5c73"}' \
+  -d '{"vehicleType":"emergency","vehicleId":"emergency_id_1","trafficLightId":"da4f0053-a5c1-3882-a688-52ae2da2e466"}' \
   "https://tcc.test/api/priority/requests"
 ```
 
@@ -64,7 +64,7 @@ curl -v -X GET \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  "https://tcc.test/api/priority/requests/442dd96d-2a62-4c72-91e9-8e16c6ed70d0"
+  "https://tcc.test/api/priority/requests/25832e4a-e98b-4e81-a5a1-94bf6af35c69"
 ```
 
 ## test traffic lights
@@ -103,6 +103,11 @@ kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-status-service --tail=50
 ### state controller 
 
 kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-state-controller --tail=50
+
+
+### priority service
+
+kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-priority-service --tail=50
 
 ### traffic light device
 
