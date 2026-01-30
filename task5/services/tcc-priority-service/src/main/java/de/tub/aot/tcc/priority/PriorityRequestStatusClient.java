@@ -11,20 +11,21 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import io.quarkus.oidc.client.filter.OidcClientFilter;
-import de.tub.aot.locationvalidator.LocationValidationRequest;
-import de.tub.aot.locationvalidator.LocationValidationResponse;
+import de.tub.aot.common.models.TrafficStatus;
+import java.util.ArrayList;
+import de.tub.aot.common.models.TrafficLightId;
+import java.util.UUID;
 
-
-@RegisterRestClient(configKey = "location-validator-api")
+@RegisterRestClient(configKey = "traffic-light-api")
 @OidcClientFilter
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-public interface PriorityLocationClient {
+public interface PriorityRequestStatusClient {
+    // TODO: Add Other Client Endpoints to reach services internally
     
-    @POST
-    @Path("/api/location/vehicle")
-    public LocationValidationResponse validateVehicleLocation(LocationValidationRequest request);
-
-
+    @GET
+    @Path("/api/status/traffic")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    TrafficStatus getTrafficState(@QueryParam("traffic-light-id") UUID trafficLightId);
 }
-

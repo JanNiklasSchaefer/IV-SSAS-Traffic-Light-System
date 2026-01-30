@@ -37,7 +37,7 @@ public class StatusResource {
     @GET
     @Path("/traffic")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center" })
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center", "priority-service" })
     public TrafficStatus getTrafficStatus(@QueryParam("traffic-light-id") UUID trafficLightId) {
         // TODO: Implementierung - intern TrafficLightDeviceService aufrufen
         // TODO: Neue Datenstrukturen verwenden (TrafficLightId, lightStates)
@@ -58,7 +58,7 @@ public class StatusResource {
     @GET
     @Path("/traffic-lights")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center" })
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle", "other-vehicle", "pedestrian", "traffic-management-center"})
     public ArrayList<TrafficLightId> getTrafficLights() {
         ArrayList<TrafficLightId> lights = lightClient.getLights();
 

@@ -1,7 +1,5 @@
 package de.tub.aot.tcc.priority;
 
-import de.tub.aot.locationvalidator.LocationValidationRequest;
-import de.tub.aot.locationvalidator.LocationValidationResponse;
 import de.tub.aot.tcc.state.StateChangeRequest;
 import de.tub.aot.timeservice.TimeValidationRequest;
 import de.tub.aot.timeservice.TimeValidationResponse;
@@ -19,6 +17,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
+import de.tub.aot.common.models.TrafficStatus;
+
 
 import java.time.Instant;
 import java.util.Comparator;
@@ -46,7 +46,7 @@ public class PriorityResource {
 
     @Inject
     @RestClient
-    PriorityLocationClient locationClient;
+    PriorityRequestStatusClient statusClient;
 
     @Inject
     @RestClient
@@ -108,7 +108,7 @@ public class PriorityResource {
         }
 
         if (vehicleId != null && activeRequestsByVehicle.containsKey(vehicleId)) {
-            return new PriorityResponse("denied", activeRequestsByVehicle.toString());
+            return new PriorityResponse("denied", "Request with ID: " + activeRequestsByVehicle.get(vehicleId) + " already exists.");
         }
 
         String requestId = UUID.randomUUID().toString();
@@ -122,7 +122,18 @@ public class PriorityResource {
         requestQueue.add(queueRequest);
 
         QueuedRequest topRequest = requestQueue.peek();
-        /* 
+
+        TrafficStatus trafficStatus = statusClient.getTrafficState(currentRequest.getTrafficLightId());
+         
+        if(trafficStatus.getState().equals("yellow")){
+            return new PriorityResponse("queued", "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.")
+        }
+        
+        if(trafficStatus.getState().equals("green")){
+            return new PriorityResponse("accepted", "Traffic Light was already Green. If Vehicles are blocking you in front, only start a PriorityRequest when noone is in front of you.");
+        }
+        
+        
         if(topRequest.request.getVehicleId().equals(currentRequest.getVehicleId())){
             stateControllerClient.changeState();
             //Remove Entries from prio queue and active maps for priority calls 
@@ -130,7 +141,7 @@ public class PriorityResource {
             requestStore.remove(requestId);
             activeRequestsByVehicle.remove(currentRequest.getVehicleId());
             return new PriorityResponse("accepted", requestId);
-        }*/
+        }
 
         return new PriorityResponse("queued", requestId);
     }
@@ -144,21 +155,35 @@ public class PriorityResource {
 
         //TODO Add check if current state = state of priority request and adjust accordingly 
 
-        QueuedRequest currentRequest = requestStore.get(requestId);
+        QueuedRequest currentQueuedRequest = requestStore.get(requestId);
 
-        if (currentRequest == null) {
+        if (currentQueuedRequest == null) {
             return new PriorityResponse("NOT_FOUND", requestId);
         }
 
+        TrafficStatus trafficStatus = statusClient.getTrafficState(currentQueuedRequest.request.getTrafficLightId());
+
+        if(trafficStatus.getState().equals("yellow")){
+            return new PriorityResponse("queued", "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
+        }
+        
+        if(trafficStatus.getState().equals("green")){
+            requestQueue.poll();
+            requestStore.remove(requestId);
+            activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
+            return new PriorityResponse("accepted", "Traffic Light is already Green. PriorityRequest with ID: " + requestId + " was deleted. If you can't pass due to blocking traffic, send another PriorityRequest once you are at the front.");
+        }
+        
+
         QueuedRequest bestRequest = requestQueue.peek();
 
-        if(bestRequest.requestId.equals(currentRequest.requestId)){
+        if(bestRequest.requestId.equals(currentQueuedRequest.requestId)){
             stateControllerClient.changeState();
             //Remove Entries from prio queue and active maps for priority calls 
             requestQueue.poll();
             requestStore.remove(requestId);
-            activeRequestsByVehicle.remove(currentRequest.request.getVehicleId());
-            return new PriorityResponse("accepted", requestId);
+            activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
+            return new PriorityResponse("accepted", "Request with Request ID: " + requestId + " accepted. Request is now deleted.");
         }
         
 
