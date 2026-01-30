@@ -73,6 +73,7 @@ curl -v -X GET \
 
 mvn -pl services/tcc-status-service clean package -Dquarkus.kubernetes.deploy=true
 
+mvn -pl services/tcc-state-controller clean package -Dquarkus.kubernetes.deploy=true
 
 # redeploy everything: 
 
@@ -140,4 +141,16 @@ curl -v -X PUT \
   -H "Content-Type: application/json" \
   -d '{"trafficLightId":{"latitude":{"degrees":37,"minutes":30,"seconds":30.0,"latitude":true},"longitude":{"degrees":-121,"minutes":30,"seconds":29.0,"latitude":false},"uuid":"8d8d1437-907b-3a79-900a-c5f0ea1f5c73","direction":"north-south"},"timestamp": "1", "state":"red", "pedestrianState" :"green" }' \
   "https://tcc.test/api/state/management/change-state"
+```
+
+
+```
+curl -v -X PUT \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d 'green' \
+  "https://tcc.test/api/state/management/change-state?traffic-light-id=8d8d1437-907b-3a79-900a-c5f0ea1f5c73"
 ```
