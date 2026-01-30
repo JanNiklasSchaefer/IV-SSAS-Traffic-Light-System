@@ -41,11 +41,14 @@ mkdir -p clients/emergency-vehicle-client/src/main/resources/certs
 mkdir -p clients/mayor-vehicle-client/src/main/resources/certs
 mkdir -p clients/other-vehicle-client/src/main/resources/certs
 mkdir -p clients/pedestrian-client/src/main/resources/certs
+mkdir -p clients/traffic-management-center-client/src/main/resources/certs
 
 cp certs/ca.p12 clients/emergency-vehicle-client/src/main/resources/certs/
 cp certs/ca.p12 clients/mayor-vehicle-client/src/main/resources/certs/
 cp certs/ca.p12 clients/other-vehicle-client/src/main/resources/certs/
 cp certs/ca.p12 clients/pedestrian-client/src/main/resources/certs/
+cp certs/ca.p12 clients/traffic-management-center-client/src/main/resources/certs/
+
 echo "✓ CA copied to all clients"
 
 # Step 4: Extract client certificate for mTLS

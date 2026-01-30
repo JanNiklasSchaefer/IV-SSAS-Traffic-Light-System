@@ -17,6 +17,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Consumes;
 import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -179,16 +180,16 @@ public class TrafficLightService {
         return Response.ok().build();
     }
 
-    @POST
+    @PUT
     @Path("/management/change-state")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "tcc-state-controller-light-service"})
-    public Response changeManagementCenterState(TrafficStatus goalStatus) {
+    public Response changeManagementCenterState(@QueryParam("traffic-light-id") UUID id, String state) {
 
-        if(!goalStatus.getState().equals("red") && !goalStatus.getState().equals("green")){
+        if(!state.equals("red") && !state.equals("green")){
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-               .entity("Illegal Traffic Light Goal State. Management Center can only change to `green` or `red`. State was : " + goalStatus.getState())
+               .entity("Illegal Traffic Light Goal State. Management Center can only change to `green` or `red`. State was : " + state)
                .type("text/plain")
                .build();
         }
@@ -214,18 +215,18 @@ public class TrafficLightService {
         //Depending on Location of Device. We decide how to change traffic state
         
         //If we want to swap north or south traffic light do this tree
-        if(goalStatus.getTrafficLightId().getUuid().equals(this.northId) || goalStatus.getTrafficLightId().getUuid().equals(this.southId)){
+        if(id.equals(this.northId) || id.equals(this.southId)){
             LOG.info("Swapping north + south to goal state");
             //Set North + south to goal status 
             TrafficStatus status = this.trafficLightMap.get(this.northId);
-            status.setState(goalStatus.getState());
+            status.setState(state);
             status.setTimestamp(Instant.now());
 
             status = this.trafficLightMap.get(this.southId);
-            status.setState(goalStatus.getState());
+            status.setState(state);
             status.setTimestamp(Instant.now());
 
-            if(goalStatus.getState().equals("red")){
+            if(state.equals("red")){
                 status = this.trafficLightMap.get(this.eastId);
                 status.setState("green");
                 status.setTimestamp(Instant.now());
@@ -234,7 +235,7 @@ public class TrafficLightService {
                 status.setState("green");
                 status.setTimestamp(Instant.now());
             }
-            if(goalStatus.getState().equals("green")){
+            if(state.equals("green")){
                 status = this.trafficLightMap.get(this.eastId);
                 status.setState("red");
                 status.setTimestamp(Instant.now());
@@ -245,18 +246,18 @@ public class TrafficLightService {
             }
         }
         //If we want to swap east or west traffic light do this tree
-        if(goalStatus.getTrafficLightId().getUuid().equals(this.eastId) || goalStatus.getTrafficLightId().getUuid().equals(this.westId)){
+        if(id.equals(this.eastId) || id.equals(this.westId)){
             //Set WEst + east to goal status 
             LOG.info("Swapping east + west to goal state");
             TrafficStatus status = this.trafficLightMap.get(this.eastId);
-            status.setState(goalStatus.getState());
+            status.setState(state);
             status.setTimestamp(Instant.now());
 
             status = this.trafficLightMap.get(this.westId);
-            status.setState(goalStatus.getState());
+            status.setState(state);
             status.setTimestamp(Instant.now());
 
-            if(goalStatus.getState().equals("red")){
+            if(state.equals("red")){
                 status = this.trafficLightMap.get(this.northId);
                 status.setState("green");
                 status.setTimestamp(Instant.now());
@@ -265,7 +266,7 @@ public class TrafficLightService {
                 status.setState("green");
                 status.setTimestamp(Instant.now());
             }
-            if(goalStatus.getState().equals("green")){
+            if(state.equals("green")){
                 status = this.trafficLightMap.get(this.northId);
                 status.setState("red");
                 status.setTimestamp(Instant.now());

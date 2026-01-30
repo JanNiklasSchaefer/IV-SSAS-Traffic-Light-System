@@ -2,6 +2,7 @@ package de.tub.aot.tcc.state;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.QueryParam;
@@ -13,6 +14,7 @@ import jakarta.ws.rs.core.Response;
 import io.quarkus.oidc.client.filter.OidcClientFilter;
 import java.util.UUID;
 import java.util.ArrayList;
+import jakarta.ws.rs.QueryParam;
 
 import de.tub.aot.common.models.TrafficStatus;
 import de.tub.aot.common.models.TrafficLightId;
@@ -29,11 +31,11 @@ public interface TccStateControllerClient {
     @Produces(MediaType.APPLICATION_JSON)
     Response changeState();
 
-    @POST
+    @PUT
     @Path("/api/device/management/change-state")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    Response managementChangeState(TrafficStatus goalStatus);
+    Response managementChangeState(@QueryParam("traffic-light-id") UUID trafficLightId, String goalStatus);
 
     @GET
     @Path("/api/device/traffic-state")

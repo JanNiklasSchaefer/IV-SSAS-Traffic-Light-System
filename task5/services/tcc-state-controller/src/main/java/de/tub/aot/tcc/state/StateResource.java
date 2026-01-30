@@ -15,6 +15,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
+import jakarta.ws.rs.QueryParam;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -89,13 +90,13 @@ public class StateResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "traffic-management-center" })
-    public Response setIntersectionState(TrafficStatus trafficStatus) {
-        LOG.info("=== PUT Traffic Light Device State: " + trafficStatus.getTrafficLightId().getUuid().toString() + " to " + trafficStatus.getState() + " ===");
+    public Response setIntersectionState(@QueryParam("traffic-light-id") UUID trafficLightId, String goalState) {
+        LOG.info("=== PUT Traffic Light Device State: " + trafficLightId.toString() + " to " + goalState + " ===");
 
         // 1. Intern TrafficLightDeviceService aufrufen - State ändern with Debug Functionality
         LOG.info("Calling Traffic Light Device Service...");
         try {
-            Response deviceResponse = tccStateControllerClient.managementChangeState(trafficStatus);
+            Response deviceResponse = tccStateControllerClient.managementChangeState(trafficLightId, goalState);
 
             String body = deviceResponse.hasEntity() ? deviceResponse.readEntity(String.class) : "<no body>";
             LOG.infof("Device response: status=%d body=%s", deviceResponse.getStatus(), body);
@@ -132,13 +133,13 @@ public class StateResource {
         // 2. Audit Service aufrufen - Event loggen
         LOG.info("Calling Audit Service...");
         try {
-            Response auditResponse = auditService.logEvent("Set intersection state to: " + trafficStatus.getState());
+            Response auditResponse = auditService.logEvent("Set intersection state to: " + goalState);
             LOG.info("Audit Service Response: " + auditResponse.getStatus());
         } catch (Exception e) {
             LOG.warn("Audit Service call failed: " + e.getMessage());
         }
 
-        return Response.ok(trafficStatus).build();
+        return Response.ok("State of Traffic Light: " + trafficLightId.toString() + " set to: " + goalState + "\n").build();
     }
 
 }
