@@ -51,8 +51,20 @@ curl -v -X POST \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency"}' \
+  -d '{"vehicleType":"emergency","vehicleId":"emergency_id_1","trafficLightId":"8d8d1437-907b-3a79-900a-c5f0ea1f5c73"}' \
   "https://tcc.test/api/priority/requests"
+```
+
+## request priority status
+
+```
+curl -v -X GET \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://tcc.test/api/priority/requests/442dd96d-2a62-4c72-91e9-8e16c6ed70d0"
 ```
 
 ## test traffic lights
@@ -74,6 +86,8 @@ curl -v -X GET \
 mvn -pl services/tcc-status-service clean package -Dquarkus.kubernetes.deploy=true
 
 mvn -pl services/tcc-state-controller clean package -Dquarkus.kubernetes.deploy=true
+
+mvn -pl services/tcc-priority-service clean package -Dquarkus.kubernetes.deploy=true
 
 # redeploy everything: 
 

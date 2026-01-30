@@ -23,7 +23,8 @@ public interface PriorityStateControllerClient {
     
     @POST
     @Path("/api/state/change")
-    Response changeState(StateChangeRequest request);
+    @Produces(MediaType.APPLICATION_JSON)
+    Response changeState();
 
     // TODO: Add Other Client Endpoints to reach services internally
 }
