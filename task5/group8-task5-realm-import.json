@@ -2753,6 +2753,14 @@
         "containerId" : "8869bba3-a2a5-495e-b7e1-478d9a521abe",
         "attributes" : { }
       }, {
+        "id" : "b87974c6-730e-4ba8-a919-432a7f4a73cb",
+        "name" : "priority-service",
+        "description" : "",
+        "composite" : false,
+        "clientRole" : true,
+        "containerId" : "8869bba3-a2a5-495e-b7e1-478d9a521abe",
+        "attributes" : { }
+      }, {
         "id" : "aa2cb535-bdf5-4305-8e8b-bbc2c25cd3d1",
         "name" : "emergency-vehicle",
         "description" : "",
@@ -3110,7 +3118,8 @@
       "location-validator" : [ "tcc-priority-service-location-role" ],
       "tcc-state-controller" : [ "tcc-priority-service-controll-service" ],
       "tcc-audit-service" : [ "tcc-priority-service-audit-role" ],
-      "time-service" : [ "tcc-priority-service-time-service" ]
+      "time-service" : [ "tcc-priority-service-time-service" ],
+      "tcc-status-service" : [ "priority-service" ]
     },
     "notBefore" : 0,
     "groups" : [ ]
