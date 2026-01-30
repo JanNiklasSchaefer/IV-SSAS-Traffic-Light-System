@@ -1,8 +1,5 @@
 package de.tub.aot.client;
 
-import de.tub.aot.client.api.PriorityRequest;
-import de.tub.aot.client.api.PriorityResponse;
-import de.tub.aot.client.api.RequestStatus;
 import de.tub.aot.client.api.TccApiClient;
 import de.tub.aot.common.models.TrafficStatus;
 import io.quarkus.runtime.QuarkusApplication;
@@ -15,7 +12,8 @@ import java.util.ArrayList;
 
 import de.tub.aot.common.models.TrafficStatus;
 import de.tub.aot.common.models.TrafficLightId;
-
+import de.tub.aot.common.models.PriorityRequest;
+import de.tub.aot.common.models.PriorityResponse;
 /**
  * Simple demo client for a Pedestrian.
  *
@@ -34,7 +32,7 @@ public class PedestrianClient implements QuarkusApplication {
 
     private static final String DUMMY_REQUEST_ID = "123e4567-e89b-12d3-a456-426614174000";
 
-    private static final UUID DUMMY_UUID = UUID.fromString("8d8d1437-907b-3a79-900a-c5f0ea1f5c73");
+    private static final UUID TRAFFIC_LIGHT_DUMMY_UUID = UUID.fromString("8d8d1437-907b-3a79-900a-c5f0ea1f5c73");
 
 
     @Inject
@@ -70,12 +68,19 @@ public class PedestrianClient implements QuarkusApplication {
                         case "2" -> {
                             if (parts.length != 2) {
                                 System.out.println(
-                                        "ERROR: Missing Vehicle Boolean Input or too many Input Parameters. Correct Pattern: 1 <Boolean>. Accepted Values: true, false. Example Call: \n> 1 true");
+                                        "ERROR: Missing traffic-light-id Input or too many Input Parameters.");
                             } else {
                                 callTrafficStatusEndpoint(UUID.fromString(parts[1]));
                             }
                         }
-                        case "3" -> callPriorityRequestEndpoint();
+                        case "3" -> {
+                            if (parts.length != 3) {
+                                System.out.println(
+                                        "ERROR: Missing Vehicle id, Traffic Light id or too many parameters. Example Call (Dummy Data): \n> 3 123e4567-e89b-12d3-a456-426614174000 ");
+                            } else {
+                                callPriorityRequestEndpoint(UUID.fromString(parts[1]),UUID.fromString(parts[2]));
+                            }
+                        }
                         case "4" -> {
                             if (parts.length != 2) {
                                 System.out.println(
@@ -100,13 +105,13 @@ public class PedestrianClient implements QuarkusApplication {
         System.out.println("""
 
                 === Menu ===
-                1                  → GET  /api/status/traffic-lights
-                2 <UUID>           → GET  /api/status/traffic?traffic-light-id={UUID}
-                3                  → POST /api/priority/requests
-                4 <requestId>      → GET  /api/priority/requests/{requestId}
-                5                  → View full Intersection Status (combines options 1 + 2; no separate endpoint)
-                6                  → Run a demo of all endpoints with dummy data.
-                q                  → Quit
+                1                                 → GET  /api/status/traffic-lights
+                2 <trafficLightId>                → GET  /api/status/traffic?traffic-light-id={UUID}
+                3 <trafficLightId> <vehicleId>    → POST /api/priority/requests Body: {"trafficLightId" : {UUID}, "vehicleId" : {UUID} , "vehicleType" : "pedestrian"}
+                4 <requestId>                     → GET  /api/priority/requests/{requestId}
+                5                                 → View full Intersection Status (combines options 1 + 2; no separate endpoint)
+                6                                 → Run a demo of all endpoints with dummy data.
+                q                                 → Quit
                 """);
     }
 
@@ -116,8 +121,8 @@ public class PedestrianClient implements QuarkusApplication {
 
         // EXTERNAL endpoints only (what the client is allowed to call)
         callTrafficLightsEndpoint();
-        callTrafficStatusEndpoint(DUMMY_UUID);
-        callPriorityRequestEndpoint();
+        callTrafficStatusEndpoint(TRAFFIC_LIGHT_DUMMY_UUID);
+        callPriorityRequestEndpoint(TRAFFIC_LIGHT_DUMMY_UUID, UUID.randomUUID());
         callRequestStatusEndpoint(DUMMY_REQUEST_ID);
         callIntersectionStatus();
 
@@ -193,10 +198,13 @@ public class PedestrianClient implements QuarkusApplication {
     }
 
 
-    private void callPriorityRequestEndpoint() throws Exception {
+    private void callPriorityRequestEndpoint(UUID trafficLightId, UUID vehicleId) throws Exception {
         System.out.println("\n--- POST /api/priority/requests ---");
 
-        PriorityRequest request = new PriorityRequest("pedestrian");
+        PriorityRequest request = new PriorityRequest();
+        request.setVehicleType("pedestrian");
+        request.setTrafficLightId(trafficLightId);
+        request.setVehicleId(vehicleId.toString());
         System.out.println("Request: " + request.getVehicleType());
 
         try {
@@ -223,11 +231,10 @@ public class PedestrianClient implements QuarkusApplication {
         System.out.println("Using requestId: " + request_id);
 
         try {
-            RequestStatus status = apiClient.getRequestStatus(request_id);
+            PriorityResponse status = apiClient.getRequestStatus(request_id);
             System.out.println("Status: 200 OK");
             System.out.println("Request ID: " + status.getRequestId());
             System.out.println("Status: " + status.getStatus());
-            System.out.println("Vehicle Type: " + status.getVehicleType());
         } catch (jakarta.ws.rs.WebApplicationException e) {
             if (e.getResponse() != null && e.getResponse().getStatus() == 403) {
                 System.out.println(

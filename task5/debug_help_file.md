@@ -51,8 +51,20 @@ curl -v -X POST \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency"}' \
+  -d '{"vehicleType":"emergency","vehicleId":"emergency_id_1","trafficLightId":"da4f0053-a5c1-3882-a688-52ae2da2e466"}' \
   "https://tcc.test/api/priority/requests"
+```
+
+## request priority status
+
+```
+curl -v -X GET \
+  --cacert certs/ca.crt \
+  --cert certs/client.crt \
+  --key certs/client.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://tcc.test/api/priority/requests/25832e4a-e98b-4e81-a5a1-94bf6af35c69"
 ```
 
 ## test traffic lights
@@ -75,6 +87,8 @@ mvn -pl services/tcc-status-service clean package -Dquarkus.kubernetes.deploy=tr
 
 mvn -pl services/tcc-state-controller clean package -Dquarkus.kubernetes.deploy=true
 
+mvn -pl services/tcc-priority-service clean package -Dquarkus.kubernetes.deploy=true
+
 # redeploy everything: 
 
 mvn clean package -Dquarkus.kubernetes.deploy=true
@@ -89,6 +103,11 @@ kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-status-service --tail=50
 ### state controller 
 
 kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-state-controller --tail=50
+
+
+### priority service
+
+kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-priority-service --tail=50
 
 ### traffic light device
 
