@@ -201,7 +201,7 @@ public class OtherVehicleClient implements QuarkusApplication {
         System.out.println("\n--- POST /api/priority/requests ---");
 
         PriorityRequest request = new PriorityRequest();
-        request.setVehicleType("pedestrian");
+        request.setVehicleType("other-vehicle");
         request.setTrafficLightId(trafficLightId);
         request.setVehicleId(vehicleId.toString());
         System.out.println("Request: " + request.getVehicleType());
