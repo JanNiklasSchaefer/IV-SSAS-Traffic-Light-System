@@ -201,7 +201,7 @@ public class OtherVehicleClient implements QuarkusApplication {
         System.out.println("\n--- POST /api/priority/requests ---");
 
         PriorityRequest request = new PriorityRequest();
-        request.setVehicleType("other-vehicle");
+        request.setVehicleType("other");
         request.setTrafficLightId(trafficLightId);
         request.setVehicleId(vehicleId.toString());
         System.out.println("Request: " + request.getVehicleType());
@@ -234,7 +234,7 @@ public class OtherVehicleClient implements QuarkusApplication {
             System.out.println("Status: 200 OK");
             System.out.println("Request ID: " + status.getRequestId());
             System.out.println("Status: " + status.getStatus());
-            System.out.println("Vehicle Type: Other Vehicle");
+            System.out.println("Vehicle Type: other");
         } catch (jakarta.ws.rs.WebApplicationException e) {
             if (e.getResponse() != null && e.getResponse().getStatus() == 403) {
                 System.out.println(
