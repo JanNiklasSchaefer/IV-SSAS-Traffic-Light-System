@@ -1,4 +1,4 @@
-package de.tub.aot.tcc.priority;
+package de.tub.aot.common.models;
 import java.util.UUID;
 
 public class PriorityRequest {

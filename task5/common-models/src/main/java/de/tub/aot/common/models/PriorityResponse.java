@@ -1,4 +1,4 @@
-package de.tub.aot.tcc.priority;
+package de.tub.aot.common.models;
 
 public class PriorityResponse {
     

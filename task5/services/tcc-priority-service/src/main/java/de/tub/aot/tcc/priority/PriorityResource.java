@@ -18,7 +18,8 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 import de.tub.aot.common.models.TrafficStatus;
-
+import de.tub.aot.common.models.PriorityRequest;
+import de.tub.aot.common.models.PriorityResponse;
 
 import java.time.Instant;
 import java.util.Comparator;
@@ -126,7 +127,7 @@ public class PriorityResource {
         TrafficStatus trafficStatus = statusClient.getTrafficState(currentRequest.getTrafficLightId());
          
         if(trafficStatus.getState().equals("yellow")){
-            return new PriorityResponse("queued", "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.")
+            return new PriorityResponse("queued", "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
         }
         
         if(trafficStatus.getState().equals("green")){
