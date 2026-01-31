@@ -34,7 +34,6 @@ public class OtherVehicleClient implements QuarkusApplication {
 
     private static final UUID TRAFFIC_LIGHT_DUMMY_UUID = UUID.fromString("8d8d1437-907b-3a79-900a-c5f0ea1f5c73");
 
-
     @Inject
     @RestClient
     TccApiClient apiClient;
@@ -78,7 +77,7 @@ public class OtherVehicleClient implements QuarkusApplication {
                                 System.out.println(
                                         "ERROR: Missing Vehicle id, Traffic Light id or too many parameters. Example Call (Dummy Data): \n> 3 123e4567-e89b-12d3-a456-426614174000 ");
                             } else {
-                                callPriorityRequestEndpoint(UUID.fromString(parts[1]),UUID.fromString(parts[2]));
+                                callPriorityRequestEndpoint(UUID.fromString(parts[1]), UUID.fromString(parts[2]));
                             }
                         }
                         case "4" -> {
@@ -102,17 +101,18 @@ public class OtherVehicleClient implements QuarkusApplication {
     }
 
     private void printMenu() {
-        System.out.println("""
+        System.out.println(
+                """
 
-                === Menu ===
-                1                                 → GET  /api/status/traffic-lights
-                2 <trafficLightId>                → GET  /api/status/traffic?traffic-light-id={UUID}
-                3 <trafficLightId> <vehicleId>    → POST /api/priority/requests Body: {"trafficLightId" : {UUID}, "vehicleId" : {UUID} , "vehicleType" : "pedestrian"}
-                4 <requestId>                     → GET  /api/priority/requests/{requestId}
-                5                                 → View full Intersection Status (combines options 1 + 2; no separate endpoint)
-                6                                 → Run a demo of all endpoints with dummy data.
-                q                                 → Quit
-                """);
+                        === Menu ===
+                        1                                 → GET  /api/status/traffic-lights
+                        2 <trafficLightId>                → GET  /api/status/traffic?traffic-light-id={UUID}
+                        3 <trafficLightId> <vehicleId>    → POST /api/priority/requests Body: {"trafficLightId" : {UUID}, "vehicleId" : {UUID} , "vehicleType" : "other"}
+                        4 <requestId>                     → GET  /api/priority/requests/{requestId}
+                        5                                 → View full Intersection Status (combines options 1 + 2; no separate endpoint)
+                        6                                 → Run a demo of all endpoints with dummy data.
+                        q                                 → Quit
+                        """);
     }
 
     private void runDemo() throws Exception {
@@ -134,9 +134,9 @@ public class OtherVehicleClient implements QuarkusApplication {
         System.out.println("\n This Function is not a direct Endpoint, but a combination of Endpoint Calls.\n");
         System.out.println("=== Intersection State: ===");
         System.out.println("-----");
-        for(TrafficLightId id : trafficLights){
+        for (TrafficLightId id : trafficLights) {
             UUID uuid = id.getUuid();
-            TrafficStatus status = apiClient.getTrafficStatus(uuid);  
+            TrafficStatus status = apiClient.getTrafficStatus(uuid);
             System.out.println("Traffic Light Direction: " + id.getDirection());
             System.out.println("UUID: " + id.getUuid());
             System.out.println("Vehicle State: " + status.getState());
@@ -184,7 +184,7 @@ public class OtherVehicleClient implements QuarkusApplication {
             ArrayList<TrafficLightId> statusList = apiClient.getTrafficLights();
             System.out.println("Status: 200 OK");
             System.out.println("---------");
-            for(TrafficLightId id : statusList){
+            for (TrafficLightId id : statusList) {
                 System.out.println("Traffic Light UUID: " + id.getUuid());
                 System.out.println("Direction: " + id.getDirection());
                 System.out.println("Longitude Coordinate: " + id.getLongitude());
