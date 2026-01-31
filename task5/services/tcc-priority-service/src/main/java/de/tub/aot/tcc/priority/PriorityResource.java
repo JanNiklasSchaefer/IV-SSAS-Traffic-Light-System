@@ -1,8 +1,6 @@
 package de.tub.aot.tcc.priority;
 
 import de.tub.aot.tcc.state.StateChangeRequest;
-import de.tub.aot.timeservice.TimeValidationRequest;
-import de.tub.aot.timeservice.TimeValidationResponse;
 import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -44,10 +42,6 @@ public class PriorityResource {
 
     // Priority Queue and Comparator
     private PriorityQueue<QueuedRequest> requestQueue;
-
-    @Inject
-    @RestClient
-    PriorityTimeClient timeClient;
 
     @Inject
     @RestClient

@@ -26,7 +26,6 @@ import java.util.UUID;
 import org.eclipse.microprofile.openapi.models.parameters.Parameter.In;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 
 import jakarta.annotation.PostConstruct;
 

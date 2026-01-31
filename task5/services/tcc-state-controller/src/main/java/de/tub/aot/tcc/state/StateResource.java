@@ -44,9 +44,6 @@ public class StateResource {
     @RestClient
     PriorityAuditService auditService;
 
-    // In-memory store for intersection states (in production, use database)
-    private Map<String, IntersectionState> intersectionStore = new HashMap<>();
-
     @POST
     @Path("/change")
     @RolesAllowed({ "tcc-priority-service-controll-service" })
