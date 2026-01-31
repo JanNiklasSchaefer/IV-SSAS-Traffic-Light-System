@@ -141,7 +141,7 @@ sudo nano /etc/hosts
 # Test ob Ingress funktioniert
 curl http://tcc.test/api/priority/requests -X POST \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency"}'
+  -d '{"vehicleType":"emergency-vehicle"}'
 
 curl http://tcc.test/api/status/traffic?vehicle=true
 ```
@@ -167,7 +167,7 @@ mvn compile exec:java \
 # Priority Request erstellen
 curl -X POST http://localhost:8080/api/priority/requests \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency"}'
+  -d '{"vehicleType":"emergency-vehicle"}'
 
 # Request Status abfragen (mit requestId aus vorheriger Antwort)
 curl http://localhost:8080/api/priority/requests/{requestId}

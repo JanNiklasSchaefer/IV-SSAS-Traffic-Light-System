@@ -214,7 +214,7 @@ Verify the file exists:
 kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
 ```
 
-3. Import the realm into Keycloak (The  http management port needs to be changed when keycloak is still turned on. Alternatively turn off keycloak.)
+3. Import the realm into Keycloak (The http management port needs to be changed when keycloak is still turned on. Alternatively turn off keycloak.)
 
 ```bash
 kubectl exec -n keycloak keycloak-0 -- \
@@ -369,7 +369,7 @@ This opens an interactive Quarkus Client, from which the public API Endpoints ca
 ```
 === Menu ===
 1 <Boolean>        → GET  /api/status/traffic?vehicle={Boolean}
-2                  → POST /api/priority/requests   
+2                  → POST /api/priority/requests
 3 <requestId>      → GET  /api/priority/requests/{requestId}
 4                  → Run a demo of all endpoints with dummy data.
 q                  → Quit
@@ -420,20 +420,18 @@ curl -v -X POST \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency"}' \
+  -d '{"vehicleType":"emergency-vehicle"}' \
   "https://tcc.test/api/priority/requests"
 ```
 
-
 curl -v \
-  --cacert certs/ca.crt \
-  --cert certs/client.crt \
-  --key certs/client.key \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{}' \
-  "https://tcc.test/api/status/traffic?state=green"
-
+ --cacert certs/ca.crt \
+ --cert certs/client.crt \
+ --key certs/client.key \
+ -H "Authorization: Bearer $TOKEN" \
+ -H "Content-Type: application/json" \
+ -d '{}' \
+ "https://tcc.test/api/status/traffic?state=green"
 
 **Note:** The client secret can be found in your `.env` file as `EMERGENCY_VEHICLE_CLIENT_SECRET`.
 
