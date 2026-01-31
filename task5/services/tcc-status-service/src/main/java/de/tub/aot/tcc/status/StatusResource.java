@@ -15,8 +15,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
-import de.tub.aot.timeservice.TimeValidationResponse;
-import de.tub.aot.timeservice.TimeValidationRequest;
 import java.util.ArrayList;
 import java.time.Instant;
 import java.util.UUID;
@@ -29,10 +27,6 @@ public class StatusResource {
     @Inject
     @RestClient
     TrafficStatusLightClient lightClient;
-
-    @Inject
-    @RestClient
-    TrafficStatusTimeClient timeClient;
 
     @GET
     @Path("/traffic")

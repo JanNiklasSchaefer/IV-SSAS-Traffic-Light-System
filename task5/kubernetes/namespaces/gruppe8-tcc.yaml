@@ -13,11 +13,3 @@ metadata:
   labels:
     name: gruppe8-traffic-light-devices
     trust-ca: iv-ssas
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gruppe8-shared-services
-  labels:
-    name: gruppe8-shared-services
-    trust-ca: iv-ssas
