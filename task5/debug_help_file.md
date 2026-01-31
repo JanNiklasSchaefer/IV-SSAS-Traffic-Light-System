@@ -6,9 +6,10 @@ TOKEN=$(curl -s --cacert certs/ca.crt \
   https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
-echo "LEN=${#TOKEN}"    
+echo "LEN=${#TOKEN}"
 ```
-## test status 
+
+## test status
 
 ```
 curl -v -X GET \
@@ -21,17 +22,20 @@ curl -v -X GET \
   "https://tcc.test/api/status/traffic?traffic-light-id=320381db-f7cd-3f31-804b-aa6b36e1c682"
 ```
 
-
 ### north-south
+
 ```
 8d8d1437-907b-3a79-900a-c5f0ea1f5c73
 ```
 
 ### south-north
+
 ```
 50fd76e3-3fe5-3961-bc5c-a99008af8904
 ```
+
 ### west-east
+
 ```
 da4f0053-a5c1-3882-a688-52ae2da2e466
 ```
@@ -51,7 +55,7 @@ curl -v -X POST \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency","vehicleId":"emergency_id_1","trafficLightId":"da4f0053-a5c1-3882-a688-52ae2da2e466"}' \
+  -d '{"vehicleType":"emergency-vehicle","vehicleId":"emergency_id_1","trafficLightId":"da4f0053-a5c1-3882-a688-52ae2da2e466"}' \
   "https://tcc.test/api/priority/requests"
 ```
 
@@ -80,8 +84,7 @@ curl -v -X GET \
   "https://tcc.test/api/status/traffic-lights"
 ```
 
-  ## redeploy a single service example call:
-
+## redeploy a single service example call:
 
 mvn -pl services/tcc-status-service clean package -Dquarkus.kubernetes.deploy=true
 
@@ -89,21 +92,19 @@ mvn -pl services/tcc-state-controller clean package -Dquarkus.kubernetes.deploy=
 
 mvn -pl services/tcc-priority-service clean package -Dquarkus.kubernetes.deploy=true
 
-# redeploy everything: 
+# redeploy everything:
 
 mvn clean package -Dquarkus.kubernetes.deploy=true
 
-
 # checking logs of a service:
 
-### status service 
+### status service
 
 kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-status-service --tail=50
 
-### state controller 
+### state controller
 
 kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-state-controller --tail=50
-
 
 ### priority service
 
@@ -113,16 +114,13 @@ kubectl logs -n gruppe8-tcc deploy/gruppe8-tcc-priority-service --tail=50
 
 kubectl logs -n gruppe8-traffic-light-devices deploy/gruppe8-traffic-light-device-service --tail=50
 
-
-##  more general : 
+## more general :
 
 kubectl logs -n {namespace} {deployment name} --tail=50
 
-
-
 # Traffic Management Center Client test calls
 
-## get token call 
+## get token call
 
 ```
 TOKEN=$(curl -s --cacert certs/ca.crt \
@@ -132,10 +130,10 @@ TOKEN=$(curl -s --cacert certs/ca.crt \
   https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
-echo "LEN=${#TOKEN}"    
+echo "LEN=${#TOKEN}"
 ```
 
-## get state call 
+## get state call
 
 ```
 curl -v -X GET \
@@ -148,8 +146,7 @@ curl -v -X GET \
   "https://tcc.test/api/state/management/state"
 ```
 
-
-## update state call 
+## update state call
 
 ```
 curl -v -X PUT \
@@ -161,7 +158,6 @@ curl -v -X PUT \
   -d '{"trafficLightId":{"latitude":{"degrees":37,"minutes":30,"seconds":30.0,"latitude":true},"longitude":{"degrees":-121,"minutes":30,"seconds":29.0,"latitude":false},"uuid":"8d8d1437-907b-3a79-900a-c5f0ea1f5c73","direction":"north-south"},"timestamp": "1", "state":"red", "pedestrianState" :"green" }' \
   "https://tcc.test/api/state/management/change-state"
 ```
-
 
 ```
 curl -v -X PUT \

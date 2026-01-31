@@ -1,6 +1,6 @@
-This document provides at least one functioning HTTPS Rest-API call for every service. Additionally the expected output is pasted. The other endpoints for the services should work too, these are simply provided templates to make testing every service easier. 
+This document provides at least one functioning HTTPS Rest-API call for every service. Additionally the expected output is pasted. The other endpoints for the services should work too, these are simply provided templates to make testing every service easier.
 
-### time-service 
+### time-service
 
 ```
 curl -v \
@@ -63,12 +63,12 @@ Output:
 > Content-Type: application/json
 > Accept: application/json
 > Content-Length: 15
-> 
+>
 * TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
-< HTTP/2 200 
+< HTTP/2 200
 < content-length: 60
 < content-type: application/json;charset=UTF-8
-< 
+<
 * Connection #0 to host gruppe8-time-service.gruppe8-shared-services.svc.cluster.local left intact
 {"valid":false,"message":"Timestamp is outside valid range"}
 ```
@@ -365,7 +365,7 @@ curl -v \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-        "vehicleType": "emergency"
+        "vehicleType": "emergency-vehicle"
       }' \
   "https://gruppe8-tcc-priority-service.gruppe8-tcc.svc.cluster.local:443/api/priority/requests"
 ```
