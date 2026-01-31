@@ -6,13 +6,13 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 import de.tub.aot.common.models.TrafficStatus;
@@ -121,6 +121,8 @@ public class PriorityResource {
     @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
     public PriorityResponse createPriorityRequest(PriorityRequest currentRequest) {
         // Input validation
+        String requestId = UUID.randomUUID().toString();
+
         if (currentRequest == null ||
                 (currentRequest.getVehicleId() == null &&
                         currentRequest.getVehicleType() == null &&
@@ -144,20 +146,18 @@ public class PriorityResource {
             return new PriorityResponse("denied", "Invalid or missing trafficLightId");
         }
 
-        if (activeRequestsByVehicle.containsKey(vehicleId)) {
+        if (this.activeRequestsByVehicle.containsKey(vehicleId)) {
             return new PriorityResponse("denied",
-                    "Request with ID: " + activeRequestsByVehicle.get(vehicleId) + " already exists.");
+                    "Request with ID: " + this.activeRequestsByVehicle.get(vehicleId) + " already exists.");
         }
 
-        String requestId = UUID.randomUUID().toString();
-
         QueuedRequest queueRequest = new QueuedRequest(requestId, currentRequest, "queued");
-        activeRequestsByVehicle.put(vehicleId, requestId);
-        requestStore.put(requestId, queueRequest);
+        this.activeRequestsByVehicle.put(vehicleId, requestId);
+        this.requestStore.put(requestId, queueRequest);
 
         LOG.info("=== Priority Request queued: " + requestId + " ===");
 
-        requestQueue.add(queueRequest);
+        this.requestQueue.add(queueRequest);
 
         QueuedRequest topRequest = requestQueue.peek();
 
@@ -165,21 +165,63 @@ public class PriorityResource {
 
         if (trafficStatus.getState().equals("yellow")) {
             return new PriorityResponse("queued",
+                    requestId,
                     "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
         }
 
         if (trafficStatus.getState().equals("green")) {
+            this.requestQueue.poll();
+            this.requestStore.remove(requestId);
+            this.activeRequestsByVehicle.remove(currentRequest.getVehicleId());
             return new PriorityResponse("accepted",
+                    requestId,
                     "Traffic Light was already Green. If Vehicles are blocking you in front, only start a PriorityRequest when nobody is in front of you.");
         }
 
         if (topRequest.request.getVehicleId().equals(currentRequest.getVehicleId())) {
-            stateControllerClient.changeState();
-            // Remove Entries from prio queue and active maps for priority calls
-            requestQueue.poll();
-            requestStore.remove(requestId);
-            activeRequestsByVehicle.remove(currentRequest.getVehicleId());
-            return new PriorityResponse("accepted", requestId);
+                //When we call the state do some fancy body parsing so we get the actual relevant http return
+                Response r = null;
+                String body = null;
+
+                try {
+                    r = stateControllerClient.changeState();
+
+                    // Always log status first
+                    int status = r.getStatus();
+
+                    // Read body safely (may be empty)
+                    try {
+                        body = r.readEntity(String.class);
+                    } catch (Exception ignored) {
+                        body = "<unreadable>";
+                    }
+
+                    LOG.infof("changeState() -> status=%d, body=%s", status, body);
+
+                    // Treat non-2xx as failure
+                    if (status / 100 != 2) {
+                        return new PriorityResponse(
+                            "queued",
+                            requestId,
+                            "State controller call failed: HTTP " + status + " " + (body != null ? body : "")
+                        );
+                    }
+                    else{ 
+                        // Succesfull State Change : Remove Entries from prio queue and active maps for priority calls
+                        this.requestQueue.poll();
+                        this.requestStore.remove(requestId);
+                        this.activeRequestsByVehicle.remove(currentRequest.getVehicleId());
+                        return new PriorityResponse("accepted", requestId);
+                    }
+                } catch (Exception e) {
+                    // If the client throws (timeouts, connection errors, etc.)
+                    LOG.error("changeState() call threw exception", e);
+                    return new PriorityResponse("denied", "State controller unreachable: " + e.getMessage());
+                } finally {
+                    if (r != null) {
+                        try { r.close(); } catch (Exception ignored) {}
+                    }
+                }
         }
 
         return new PriorityResponse("queued", requestId);
@@ -198,7 +240,7 @@ public class PriorityResource {
         // TODO Add check if current state = state of priority request and adjust
         // accordingly
 
-        QueuedRequest currentQueuedRequest = requestStore.get(requestId);
+        QueuedRequest currentQueuedRequest = this.requestStore.get(requestId);
 
         if (currentQueuedRequest == null) {
             return new PriorityResponse("NOT_FOUND", requestId);
@@ -208,30 +250,69 @@ public class PriorityResource {
 
         if (trafficStatus.getState().equals("yellow")) {
             return new PriorityResponse("queued",
+                    requestId,
                     "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
         }
 
         if (trafficStatus.getState().equals("green")) {
-            requestQueue.poll();
-            requestStore.remove(requestId);
-            activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
+            this.requestQueue.poll();
+            this.requestStore.remove(requestId);
+            this.activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
             return new PriorityResponse("accepted", "Traffic Light is already Green. PriorityRequest with ID: "
                     + requestId
                     + " was deleted. If you can't pass due to blocking traffic, send another PriorityRequest once you are at the front.");
         }
 
-        QueuedRequest bestRequest = requestQueue.peek();
+        QueuedRequest bestRequest = this.requestQueue.peek();
 
         if (bestRequest.requestId.equals(currentQueuedRequest.requestId)) {
-            stateControllerClient.changeState();
-            // Remove Entries from prio queue and active maps for priority calls
-            requestQueue.poll();
-            requestStore.remove(requestId);
-            activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
-            return new PriorityResponse("accepted",
-                    "Request with Request ID: " + requestId + " accepted. Request is now deleted.");
+            Response r = null;
+            String body = null;
+
+            try {
+                r = stateControllerClient.changeState();
+
+                // Always log status first
+                int status = r.getStatus();
+
+                // Read body safely (may be empty)
+                try {
+                    body = r.readEntity(String.class);
+                } catch (Exception ignored) {
+                    body = "<unreadable>";
+                }
+
+                LOG.infof("changeState() -> status=%d, body=%s", status, body);
+
+                // Treat non-2xx as failure
+                if (status / 100 != 2) {
+                    return new PriorityResponse(
+                        "queued",
+                        "State controller call failed: HTTP " + status + " " + (body != null ? body : "")
+                    );
+                }
+                else{
+                    // Remove Entries from prio queue and active maps for priority calls
+                    this.requestQueue.poll();
+                    this.requestStore.remove(requestId);
+                    this.activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
+                    return new PriorityResponse("accepted",
+                            "Request with Request ID: " + requestId + " accepted. Request is now deleted.");
+                        }
+            } catch (Exception e) {
+                // If the client throws (timeouts, connection errors, etc.)
+                LOG.error("changeState() call threw exception", e);
+                return new PriorityResponse("denied", "State controller unreachable: " + e.getMessage());
+            } finally {
+                if (r != null) {
+                    try { r.close(); } catch (Exception ignored) {}
+                }
+            }
+
         }
 
         return new PriorityResponse("queued", requestId);
     }
 }
+
+

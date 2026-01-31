@@ -82,7 +82,7 @@ curl -v -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}' \
-  "https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443/api/device/change-state?state=green"
+  "https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443/api/device/change-state"
 ```
 ### Call Get Traffic Lights 
 
@@ -155,19 +155,6 @@ curl -v -X POST \
   "https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443/api/device/traffic-state?state=green"
 ```
 
-### Call: Time Service
-
-```bash
-curl -v -X POST \
-  --cacert /etc/tls/ca.crt \
-  --cert /etc/tls/tls.crt \
-  --key /etc/tls/tls.key \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"timestamp":1700000000000}' \
-  "https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
-```
-
 ---
 
 ## 5️⃣ Get token for tcc-priority-service and call authorized endpoints
@@ -182,19 +169,6 @@ TOKEN=$(curl -s \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 echo "LEN=${#TOKEN}"            # If this is greater than 0 we have gotten an access_token from keycloak.
-```
-
-### Call: Time Service
-
-```bash
-curl -v -X POST \
-  --cacert /etc/tls/ca.crt \
-  --cert /etc/tls/tls.crt \
-  --key /etc/tls/tls.key \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"timestamp":1700000000000}' \
-  "https://gruppe8-time-service.gruppe8-shared-services.svc.cluster.local:443/api/time/validate"
 ```
 
 ### Call: State Controller
@@ -239,84 +213,7 @@ curl -v \
   "https://gruppe8-tcc-audit-service.gruppe8-tcc.svc.cluster.local:443/api/audit/logs?from=0&to=9999999999999"
 ```
 
-### Call: Location Validator
-
-```bash
-curl -v -X POST \
-  --cacert /etc/tls/ca.crt \
-  --cert /etc/tls/tls.crt \
-  --key /etc/tls/tls.key \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "vehicleId": "vehicle-123",
-        "coordinates": {
-          "latitude": 52.520008,
-          "longitude": 13.404954
-        }
-      }' \
-  "https://gruppe8-location-validator.gruppe8-shared-services.svc.cluster.local:443/api/location/vehicle"
-```
-
-## 6️⃣  Verify Securicy Policy
-
-All previous calls were designed to work. This shows that access controll works. Additionally requests with wrong Authorization Headers or missing ones should be denied. Here one example for each situation is provided, which lead to a 403 Error. To know if a 403 Error should occur you can have a look at the Securicy Policy in [README.md](README.md).
-
-### No authorization header
-
-```bash
-curl -v -X POST \
-  --cacert /etc/tls/ca.crt \
-  --cert /etc/tls/tls.crt \
-  --key /etc/tls/tls.key \
-  -H "Content-Type: application/json" \
-  -d '{
-        "vehicleId": "vehicle-123",
-        "coordinates": {
-          "latitude": 52.520008,
-          "longitude": 13.404954
-        }
-      }' \
-  "https://gruppe8-location-validator.gruppe8-shared-services.svc.cluster.local:443/api/location/vehicle"
-```
-
-### Calling an Endpoint without Authorization
-
-1. Get an access_token for the tcc-state-controller:
-
-```bash
-TOKEN=$(curl -vk \
-  --cacert /etc/tls/ca.crt \
-  -d grant_type=client_credentials \
-  -d client_id=tcc-state-controller \
-  -d client_secret=MEb3nfjgTGkEHiZs8NugXxKTf2UqHdVC \
-  https://keycloak-service.keycloak.svc.cluster.local:8443/keycloak/realms/group8-task5/protocol/openid-connect/token \
-  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
-
-echo "LEN=${#TOKEN}"
-```
-
-2. Try to call an endpoint, which is not authorized for the tcc-state-controller:
-
-```bash
-curl -v -X POST \
-  --cacert /etc/tls/ca.crt \
-  --cert /etc/tls/tls.crt \
-  --key /etc/tls/tls.key \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "vehicleId": "vehicle-123",
-        "coordinates": {
-          "latitude": 52.520008,
-          "longitude": 13.404954
-        }
-      }' \
-  "https://gruppe8-location-validator.gruppe8-shared-services.svc.cluster.local:443/api/location/vehicle"
-```
-
-
----
+--- 
 
 ## 7️⃣ Cleanup
 

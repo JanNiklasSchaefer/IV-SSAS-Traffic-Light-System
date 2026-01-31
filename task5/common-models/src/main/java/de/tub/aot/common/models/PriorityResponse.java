@@ -4,6 +4,7 @@ public class PriorityResponse {
     
     private String status;
     private String requestId;
+    private String statusMessage;
     
     public PriorityResponse() {
     }
@@ -11,6 +12,12 @@ public class PriorityResponse {
     public PriorityResponse(String status, String requestId) {
         this.status = status;
         this.requestId = requestId;
+    }
+
+    public PriorityResponse(String status, String requestId, String trafficStatus){
+        this.status = status;
+        this.requestId = requestId;
+        this.statusMessage = trafficStatus;
     }
     
     public String getStatus() {
@@ -20,7 +27,7 @@ public class PriorityResponse {
     public void setStatus(String status) {
         this.status = status;
     }
-    
+
     public String getRequestId() {
         return requestId;
     }

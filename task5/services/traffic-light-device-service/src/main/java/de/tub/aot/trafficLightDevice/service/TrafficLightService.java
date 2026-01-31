@@ -23,14 +23,14 @@ import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
 import java.util.UUID;
 
-import org.eclipse.microprofile.openapi.models.parameters.Parameter.In;
-
 import java.nio.charset.StandardCharsets;
 
 import jakarta.annotation.PostConstruct;
 
 import org.jboss.logging.Logger;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.*;
 
 @Path("/api/device")
 @ApplicationScoped
@@ -39,6 +39,12 @@ public class TrafficLightService {
     //Activate Loggin
     private static final Logger LOG = Logger.getLogger(TrafficLightService.class);
 
+    // Make it possible to only change state from endpoint at a time, but still allow reading of the endpoint
+
+    private final ReadWriteLock rw = new ReentrantReadWriteLock(true);
+    private final Lock readLock = rw.readLock();
+    private final Lock writeLock = rw.writeLock();
+    private final AtomicBoolean transitioning = new AtomicBoolean(false);
 
     ArrayList<TrafficLightId> trafficLightIdArray = new ArrayList<TrafficLightId>();
     ArrayList<TrafficStatus> TrafficStatus = new ArrayList<TrafficStatus>();
@@ -125,56 +131,78 @@ public class TrafficLightService {
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"tcc-state-controller-light-service","tcc-status-service-light-service"})
     public TrafficStatus getTrafficState(@QueryParam("traffic-light-id") UUID trafficLightId){
-        TrafficStatus status = this.trafficLightMap.get(trafficLightId);
-        return status;
+        readLock.lock();
+        try {
+            return this.trafficLightMap.get(trafficLightId);
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @POST
     @Path("/change-state")
-    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "tcc-state-controller-light-service"})
     public Response changeState() {
 
-        Map<UUID,String> previousStatesMap = new HashMap<UUID,String>();
-        // First set intersection to yellow for a few seconds and wait for traffic to clear 
-        for(TrafficStatus status : this.trafficLightMap.values()){
-            // Check for illegal states before starting a swap. 
-            if(!status.getState().equals("green") && !status.getState().equals("red")){
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-               .entity("Illegal Traffic Light State or State Change Request requested while changing already.")
-               .type("text/plain")
-               .build();
-            }
-            Instant timer = Instant.now();
-            previousStatesMap.put(status.getTrafficLightId().getUuid(), status.getState());
-            status.setTimestamp(timer);
-            status.setState("yellow");
+        if (!transitioning.compareAndSet(false, true)) {
+            return Response.status(409)
+                .entity("Already transitioning; try again later.")
+                .type("text/plain")
+                .build();
         }
+
+        Map<UUID,String> previousStatesMap = new HashMap<UUID,String>();
 
         // Wait for traffic intersection to clear
         try {
-        Thread.sleep(3000); // 3 seconds
+            writeLock.lock();
+            try{
+            // First set intersection to yellow for a few seconds and wait for traffic to clear 
+                for(TrafficStatus status : this.trafficLightMap.values()){
+                    // Check for illegal states before starting a swap. 
+                    if(!status.getState().equals("green") && !status.getState().equals("red")){
+                        return Response.status(409)
+                    .entity("Traffic Lights already changing.")
+                    .type("text/plain")
+                    .build();
+                    }
+                    Instant timer = Instant.now();
+                    previousStatesMap.put(status.getTrafficLightId().getUuid(), status.getState());
+                    status.setTimestamp(timer);
+                    status.setState("yellow");
+                }
+            } finally{
+                writeLock.unlock();
+            }
+
+            Thread.sleep(15000); // 3 seconds
+            
+            writeLock.lock();
+            try{
+            //Now go over all states again and swap to opposite of previous state
+                for(TrafficStatus status : this.trafficLightMap.values()){
+                    UUID id = status.getTrafficLightId().getUuid();
+                    String state = previousStatesMap.get(id);
+                    if(state.equals("green")){
+                        status.setState("red");
+                    }
+                    if(state.equals("red")){
+                        status.setState("green");
+                    }
+                    //Set Timestamp
+                    Instant timer = Instant.now();
+                    status.setTimestamp(timer);
+                }
+            } finally{
+                writeLock.unlock();
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt(); // restore interrupt flag
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();        
-            }
-        
-        //Now go over all states again and swap to opposite of previous state
-        for(TrafficStatus status : this.trafficLightMap.values()){
-            UUID id = status.getTrafficLightId().getUuid();
-            String state = previousStatesMap.get(id);
-            if(state.equals("green")){
-                status.setState("red");
-            }
-            if(state.equals("red")){
-                status.setState("green");
-            }
-            //Set Timestamp
-            Instant timer = Instant.now();
-            status.setTimestamp(timer);
+        } finally {
+            transitioning.set(false);
         }
-        
 
         return Response.ok().build();
     }
@@ -185,98 +213,119 @@ public class TrafficLightService {
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({ "tcc-state-controller-light-service"})
     public Response changeManagementCenterState(@QueryParam("traffic-light-id") UUID id, String state) {
+        
+        if(!state.equals("red") && !state.equals("green") && !state.equals("yellow")){
+            return Response.status(400)
+                .entity("State + " + state + " is not a valid state. Only green, yellow and red are valid states.")
+                .type("text/plain")
+                .build();
+        }
 
-        if(!state.equals("red") && !state.equals("green")){
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-               .entity("Illegal Traffic Light Goal State. Management Center can only change to `green` or `red`. State was : " + state)
-               .type("text/plain")
-               .build();
+        // Lock the thread for any access but just logically not via actually thread lockdown
+        if (!transitioning.compareAndSet(false, true)) {
+            return Response.status(409)
+                .entity("Already transitioning; try again later.")
+                .type("text/plain")
+                .build();
         }
 
         LOG.info("Iterating over Traffic Status Field and setting to yellow");
         // First set intersection to yellow for a few seconds and wait for traffic to clear 
-        for(TrafficStatus status : this.trafficLightMap.values()){
-            // Check for illegal states before starting a swap. 
-            Instant timer = Instant.now();
-            status.setTimestamp(timer);
-            status.setState("yellow");
-        }
-
-        LOG.info("Sleeping for 3 Seconds");
-        // Wait for traffic intersection to clear
-        try {
-        Thread.sleep(3000); // 3 seconds
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // restore interrupt flag
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();        
+        try{
+            writeLock.lock();
+            try{
+                for(TrafficStatus status : this.trafficLightMap.values()){
+                    // Check for illegal states before starting a swap. 
+                    Instant timer = Instant.now();
+                    status.setTimestamp(timer);
+                    status.setState("yellow");
+                    // If Goal State is yellow return a 200 Code. Used for Testing Purposes Only.
+                    if(state.equals("yellow")) return Response.ok().build();
+                }
+            } finally {
+                writeLock.unlock();
             }
-        
-        //Depending on Location of Device. We decide how to change traffic state
-        
-        //If we want to swap north or south traffic light do this tree
-        if(id.equals(this.northId) || id.equals(this.southId)){
-            LOG.info("Swapping north + south to goal state");
-            //Set North + south to goal status 
-            TrafficStatus status = this.trafficLightMap.get(this.northId);
-            status.setState(state);
-            status.setTimestamp(Instant.now());
+            LOG.info("Sleeping for 3 Seconds");
+            // Wait for traffic intersection to clear
+            try {
+            Thread.sleep(15000); // 3 seconds
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // restore interrupt flag
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();        
+                }
+            
+            //Depending on Location of Device. We decide how to change traffic state
+            writeLock.lock();
+            try{
+                //If we want to swap north or south traffic light do this tree
+                if(id.equals(this.northId) || id.equals(this.southId)){
+                    LOG.info("Swapping north + south to goal state");
+                    //Set North + south to goal status 
+                    TrafficStatus status = this.trafficLightMap.get(this.northId);
+                    status.setState(state);
+                    status.setTimestamp(Instant.now());
 
-            status = this.trafficLightMap.get(this.southId);
-            status.setState(state);
-            status.setTimestamp(Instant.now());
+                    status = this.trafficLightMap.get(this.southId);
+                    status.setState(state);
+                    status.setTimestamp(Instant.now());
 
-            if(state.equals("red")){
-                status = this.trafficLightMap.get(this.eastId);
-                status.setState("green");
-                status.setTimestamp(Instant.now());
+                    if(state.equals("red")){
+                        status = this.trafficLightMap.get(this.eastId);
+                        status.setState("green");
+                        status.setTimestamp(Instant.now());
 
-                status = this.trafficLightMap.get(this.westId);
-                status.setState("green");
-                status.setTimestamp(Instant.now());
+                        status = this.trafficLightMap.get(this.westId);
+                        status.setState("green");
+                        status.setTimestamp(Instant.now());
+                    }
+                    if(state.equals("green")){
+                        status = this.trafficLightMap.get(this.eastId);
+                        status.setState("red");
+                        status.setTimestamp(Instant.now());
+
+                        status = this.trafficLightMap.get(this.westId);
+                        status.setState("red");
+                        status.setTimestamp(Instant.now());
+                    }
+                }
+                //If we want to swap east or west traffic light do this tree
+                if(id.equals(this.eastId) || id.equals(this.westId)){
+                    //Set WEst + east to goal status 
+                    LOG.info("Swapping east + west to goal state");
+                    TrafficStatus status = this.trafficLightMap.get(this.eastId);
+                    status.setState(state);
+                    status.setTimestamp(Instant.now());
+
+                    status = this.trafficLightMap.get(this.westId);
+                    status.setState(state);
+                    status.setTimestamp(Instant.now());
+
+                    if(state.equals("red")){
+                        status = this.trafficLightMap.get(this.northId);
+                        status.setState("green");
+                        status.setTimestamp(Instant.now());
+
+                        status = this.trafficLightMap.get(this.southId);
+                        status.setState("green");
+                        status.setTimestamp(Instant.now());
+                    }
+                    if(state.equals("green")){
+                        status = this.trafficLightMap.get(this.northId);
+                        status.setState("red");
+                        status.setTimestamp(Instant.now());
+
+                        status = this.trafficLightMap.get(this.southId);
+                        status.setState("red");
+                        status.setTimestamp(Instant.now());
+                    }
+                }
+            } finally {
+                writeLock.unlock();
             }
-            if(state.equals("green")){
-                status = this.trafficLightMap.get(this.eastId);
-                status.setState("red");
-                status.setTimestamp(Instant.now());
-
-                status = this.trafficLightMap.get(this.westId);
-                status.setState("red");
-                status.setTimestamp(Instant.now());
-            }
-        }
-        //If we want to swap east or west traffic light do this tree
-        if(id.equals(this.eastId) || id.equals(this.westId)){
-            //Set WEst + east to goal status 
-            LOG.info("Swapping east + west to goal state");
-            TrafficStatus status = this.trafficLightMap.get(this.eastId);
-            status.setState(state);
-            status.setTimestamp(Instant.now());
-
-            status = this.trafficLightMap.get(this.westId);
-            status.setState(state);
-            status.setTimestamp(Instant.now());
-
-            if(state.equals("red")){
-                status = this.trafficLightMap.get(this.northId);
-                status.setState("green");
-                status.setTimestamp(Instant.now());
-
-                status = this.trafficLightMap.get(this.southId);
-                status.setState("green");
-                status.setTimestamp(Instant.now());
-            }
-            if(state.equals("green")){
-                status = this.trafficLightMap.get(this.northId);
-                status.setState("red");
-                status.setTimestamp(Instant.now());
-
-                status = this.trafficLightMap.get(this.southId);
-                status.setState("red");
-                status.setTimestamp(Instant.now());
-            }
-        }
-        
-        return Response.ok().build();
+            return Response.ok().build();
+        } finally {
+            transitioning.set(false);
+        }      
     }
 
     @GET

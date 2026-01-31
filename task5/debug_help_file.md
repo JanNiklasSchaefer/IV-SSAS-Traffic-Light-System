@@ -92,6 +92,8 @@ mvn -pl services/tcc-state-controller clean package -Dquarkus.kubernetes.deploy=
 
 mvn -pl services/tcc-priority-service clean package -Dquarkus.kubernetes.deploy=true
 
+mvn -pl services/gruppe8-traffic-light-device-serviceclean package -Dquarkus.kubernetes.deploy=true
+
 # redeploy everything:
 
 mvn clean package -Dquarkus.kubernetes.deploy=true
