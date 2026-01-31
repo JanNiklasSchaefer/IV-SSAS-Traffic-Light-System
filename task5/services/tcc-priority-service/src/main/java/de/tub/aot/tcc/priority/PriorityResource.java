@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.UUID;
 
 @Path("/api/priority")
@@ -34,6 +35,9 @@ import java.util.UUID;
 public class PriorityResource {
 
     private static final Logger LOG = Logger.getLogger(PriorityResource.class);
+
+    // Allowed vehicle types
+    private static final Set<String> ALLOWED_VEHICLE_TYPES = Set.of("emergency-vehicle", "mayor-vehicle", "other");
 
     private Map<String, QueuedRequest> requestStore = new HashMap<>();
     private Map<String, String> activeRequestsByVehicle = new HashMap<>();
@@ -70,6 +74,30 @@ public class PriorityResource {
         this.requestQueue = new PriorityQueue<>(comparator);
     }
 
+    private boolean isValidVehicleId(String vehicleId) {
+        return vehicleId != null && !vehicleId.trim().isEmpty();
+    }
+
+    private boolean isValidVehicleType(String vehicleType) {
+        return vehicleType != null && !vehicleType.trim().isEmpty() && ALLOWED_VEHICLE_TYPES.contains(vehicleType);
+    }
+
+    private boolean isValidTrafficLightId(UUID trafficLightId) {
+        return trafficLightId != null;
+    }
+
+    private boolean isValidRequestId(String requestId) {
+        if (requestId == null || requestId.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            UUID.fromString(requestId);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     private int getPriority(String type) {
         if ("emergency-vehicle".equals(type))
             return 1;
@@ -96,20 +124,35 @@ public class PriorityResource {
     @Path("/requests")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle"})
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
     public PriorityResponse createPriorityRequest(PriorityRequest currentRequest) {
+        // Input validation
+        if (currentRequest == null ||
+                (currentRequest.getVehicleId() == null &&
+                        currentRequest.getVehicleType() == null &&
+                        currentRequest.getTrafficLightId() == null)) {
+            return new PriorityResponse("denied", "Request body is required or incomplete");
+        }
+
         String vehicleId = currentRequest.getVehicleId();
-
-        if(vehicleId == null){
-            return new PriorityResponse("denied", "missing vehicleId");
+        if (!isValidVehicleId(vehicleId)) {
+            return new PriorityResponse("denied", "Invalid or missing vehicleId");
         }
 
-        if(currentRequest.getVehicleType() == null){
-            return new PriorityResponse("denied", "missing vehicleType");
+        String vehicleType = currentRequest.getVehicleType();
+        if (!isValidVehicleType(vehicleType)) {
+            return new PriorityResponse("denied",
+                    "Invalid vehicleType. Allowed values: emergency-vehicle, mayor-vehicle, other");
         }
 
-        if (vehicleId != null && activeRequestsByVehicle.containsKey(vehicleId)) {
-            return new PriorityResponse("denied", "Request with ID: " + activeRequestsByVehicle.get(vehicleId) + " already exists.");
+        UUID trafficLightId = currentRequest.getTrafficLightId();
+        if (!isValidTrafficLightId(trafficLightId)) {
+            return new PriorityResponse("denied", "Invalid or missing trafficLightId");
+        }
+
+        if (activeRequestsByVehicle.containsKey(vehicleId)) {
+            return new PriorityResponse("denied",
+                    "Request with ID: " + activeRequestsByVehicle.get(vehicleId) + " already exists.");
         }
 
         String requestId = UUID.randomUUID().toString();
@@ -125,19 +168,20 @@ public class PriorityResource {
         QueuedRequest topRequest = requestQueue.peek();
 
         TrafficStatus trafficStatus = statusClient.getTrafficState(currentRequest.getTrafficLightId());
-         
-        if(trafficStatus.getState().equals("yellow")){
-            return new PriorityResponse("queued", "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
+
+        if (trafficStatus.getState().equals("yellow")) {
+            return new PriorityResponse("queued",
+                    "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
         }
-        
-        if(trafficStatus.getState().equals("green")){
-            return new PriorityResponse("accepted", "Traffic Light was already Green. If Vehicles are blocking you in front, only start a PriorityRequest when noone is in front of you.");
+
+        if (trafficStatus.getState().equals("green")) {
+            return new PriorityResponse("accepted",
+                    "Traffic Light was already Green. If Vehicles are blocking you in front, only start a PriorityRequest when nobody is in front of you.");
         }
-        
-        
-        if(topRequest.request.getVehicleId().equals(currentRequest.getVehicleId())){
+
+        if (topRequest.request.getVehicleId().equals(currentRequest.getVehicleId())) {
             stateControllerClient.changeState();
-            //Remove Entries from prio queue and active maps for priority calls 
+            // Remove Entries from prio queue and active maps for priority calls
             requestQueue.poll();
             requestStore.remove(requestId);
             activeRequestsByVehicle.remove(currentRequest.getVehicleId());
@@ -147,14 +191,18 @@ public class PriorityResource {
         return new PriorityResponse("queued", requestId);
     }
 
-
     @GET
     @Path("/requests/{request_id}")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle"})
+    @RolesAllowed({ "emergency-vehicle", "mayor-vehicle" })
     public PriorityResponse getRequestStatus(@PathParam("request_id") String requestId) {
+        // Input validation
+        if (!isValidRequestId(requestId)) {
+            return new PriorityResponse("denied", "Invalid requestId format (must be valid UUID)");
+        }
 
-        //TODO Add check if current state = state of priority request and adjust accordingly 
+        // TODO Add check if current state = state of priority request and adjust
+        // accordingly
 
         QueuedRequest currentQueuedRequest = requestStore.get(requestId);
 
@@ -164,29 +212,31 @@ public class PriorityResource {
 
         TrafficStatus trafficStatus = statusClient.getTrafficState(currentQueuedRequest.request.getTrafficLightId());
 
-        if(trafficStatus.getState().equals("yellow")){
-            return new PriorityResponse("queued", "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
+        if (trafficStatus.getState().equals("yellow")) {
+            return new PriorityResponse("queued",
+                    "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
         }
-        
-        if(trafficStatus.getState().equals("green")){
+
+        if (trafficStatus.getState().equals("green")) {
             requestQueue.poll();
             requestStore.remove(requestId);
             activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
-            return new PriorityResponse("accepted", "Traffic Light is already Green. PriorityRequest with ID: " + requestId + " was deleted. If you can't pass due to blocking traffic, send another PriorityRequest once you are at the front.");
+            return new PriorityResponse("accepted", "Traffic Light is already Green. PriorityRequest with ID: "
+                    + requestId
+                    + " was deleted. If you can't pass due to blocking traffic, send another PriorityRequest once you are at the front.");
         }
-        
 
         QueuedRequest bestRequest = requestQueue.peek();
 
-        if(bestRequest.requestId.equals(currentQueuedRequest.requestId)){
+        if (bestRequest.requestId.equals(currentQueuedRequest.requestId)) {
             stateControllerClient.changeState();
-            //Remove Entries from prio queue and active maps for priority calls 
+            // Remove Entries from prio queue and active maps for priority calls
             requestQueue.poll();
             requestStore.remove(requestId);
             activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
-            return new PriorityResponse("accepted", "Request with Request ID: " + requestId + " accepted. Request is now deleted.");
+            return new PriorityResponse("accepted",
+                    "Request with Request ID: " + requestId + " accepted. Request is now deleted.");
         }
-        
 
         return new PriorityResponse("queued", requestId);
     }
