@@ -50,8 +50,8 @@ public class StateResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response changeState(StateChangeRequest request) {
-        // Response output = tccStateControllerClient.changeState(request.getState());
-        return Response.ok().build();
+        Response output = tccStateControllerClient.changeState();
+        return output;
     }
 
     @GET
