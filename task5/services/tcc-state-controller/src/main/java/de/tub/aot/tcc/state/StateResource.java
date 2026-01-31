@@ -94,12 +94,13 @@ public class StateResource {
         LOG.info("Calling Traffic Light Device Service...");
         try {
             Response deviceResponse = tccStateControllerClient.managementChangeState(trafficLightId, goalState);
-
+            int status = deviceResponse.getStatus();
             String body = deviceResponse.hasEntity() ? deviceResponse.readEntity(String.class) : "<no body>";
+            
             LOG.infof("Device response: status=%d body=%s", deviceResponse.getStatus(), body);
 
             if (deviceResponse.getStatus() >= 400) {
-                return Response.status(deviceResponse.getStatus())
+                  return Response.status(status)
                         .entity(body)
                         .type(MediaType.TEXT_PLAIN)
                         .build();
