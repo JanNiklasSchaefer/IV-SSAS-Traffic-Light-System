@@ -8,6 +8,18 @@ TOKEN=$(curl -s --cacert certs/ca.crt \
 
 echo "LEN=${#TOKEN}"
 ```
+## token mayor - vehicle
+
+```
+TOKEN=$(curl -s --cacert certs/ca.crt \
+  -d grant_type=client_credentials \
+  -d client_id=mayor-vehicle-client \
+  -d client_secret=L3T9G2d7YG3Gaz2zU4jIwoPwg8xoxDpt \
+  https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+echo "LEN=${#TOKEN}"
+```
 
 ## test status
 
@@ -55,7 +67,7 @@ curl -v -X POST \
   --key certs/client.key \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"vehicleType":"emergency-vehicle","vehicleId":"emergency_id_1","trafficLightId":"da4f0053-a5c1-3882-a688-52ae2da2e466"}' \
+  -d '{"vehicleType":"emergency-vehicle","vehicleId":"7de3d833-8468-4105-8435-f178b6ff279c","trafficLightId":"da4f0053-a5c1-3882-a688-52ae2da2e466"}' \
   "https://tcc.test/api/priority/requests"
 ```
 
