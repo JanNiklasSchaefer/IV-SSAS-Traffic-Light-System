@@ -14,10 +14,10 @@ public class PriorityResponse {
         this.requestId = requestId;
     }
 
-    public PriorityResponse(String status, String requestId, String trafficStatus){
+    public PriorityResponse(String status, String requestId, String statusMessage){
         this.status = status;
         this.requestId = requestId;
-        this.statusMessage = trafficStatus;
+        this.statusMessage = statusMessage;
     }
     
     public String getStatus() {
