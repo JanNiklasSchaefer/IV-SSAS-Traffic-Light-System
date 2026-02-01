@@ -240,8 +240,8 @@ public class TrafficLightService {
                     status.setTimestamp(timer);
                     status.setState("yellow");
                     // If Goal State is yellow return a 200 Code. Used for Testing Purposes Only.
-                    if(state.equals("yellow")) return Response.ok().build();
                 }
+                if(state.equals("yellow")) return Response.ok().build();
             } finally {
                 writeLock.unlock();
             }

@@ -26,6 +26,9 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Path("/api/priority")
 @ApplicationScoped
@@ -100,17 +103,37 @@ public class PriorityResource {
         return 3; // Other
     }
 
+    // Clean up all entries in priority queue that are older than 60 seconds 
+
+    private void dataCleanUp() {
+        long cutoff = System.currentTimeMillis() - 60_000L;
+
+        requestQueue.removeIf(qr -> {
+            if (qr.lastUpdateTimestamp <= cutoff) {
+                this.requestStore.remove(qr.requestId);
+                if (qr.request != null) {
+                    this.activeRequestsByVehicle.remove(qr.request.getVehicleId());
+                }
+                return true;
+            }
+            return false;
+        });
+    }
+
+
     private static class QueuedRequest {
         String requestId;
         PriorityRequest request;
         long timestamp;
         String requestState;
+        long lastUpdateTimestamp;
 
         QueuedRequest(String requestId, PriorityRequest request, String requestState) {
             this.requestId = requestId;
             this.request = request;
             this.requestState = requestState;
             this.timestamp = System.currentTimeMillis();
+            this.lastUpdateTimestamp = System.currentTimeMillis();
         }
     }
 
@@ -246,6 +269,8 @@ public class PriorityResource {
             return new PriorityResponse("NOT_FOUND", requestId);
         }
 
+        currentQueuedRequest.lastUpdateTimestamp = System.currentTimeMillis();
+
         TrafficStatus trafficStatus = statusClient.getTrafficState(currentQueuedRequest.request.getTrafficLightId());
 
         if (trafficStatus.getState().equals("yellow")) {
@@ -307,6 +332,11 @@ public class PriorityResource {
                 if (r != null) {
                     try { r.close(); } catch (Exception ignored) {}
                 }
+                    try {
+                        dataCleanUp();
+                    } catch (Exception e) {
+                        LOG.warn("dataCleanUp() failed (will not affect HTTP response)", e);
+                    }
             }
 
         }
