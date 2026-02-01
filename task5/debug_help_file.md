@@ -21,6 +21,20 @@ TOKEN=$(curl -s --cacert certs/ca.crt \
 echo "LEN=${#TOKEN}"
 ```
 
+### token other -vehicle
+
+```
+TOKEN=$(curl -s --cacert certs/ca.crt \
+  -d grant_type=client_credentials \
+  -d client_id=other-vehicle-client \
+  -d client_secret=897oGYqj6NSK8IWGOCddTM6iMtDIUnsY \
+  https://keycloak.test/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+echo "LEN=${#TOKEN}"
+```
+
+
 ## test status
 
 ```

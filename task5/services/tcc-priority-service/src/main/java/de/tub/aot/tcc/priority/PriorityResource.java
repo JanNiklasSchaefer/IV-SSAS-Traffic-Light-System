@@ -158,11 +158,11 @@ public class PriorityResource {
             vehicleType = "mayor-vehicle";
         } else {
             // Should never happen because of @RolesAllowed, but keep it safe
-            return new PriorityResponse("denied", "Missing required role");
+            return new PriorityResponse("denied", null, "Missing required role");
         }
 
         if(!currentRequest.getVehicleType().equals(vehicleType)){
-            return new PriorityResponse("denied", "Vehicle Type does not align with assigned Role");
+            return new PriorityResponse("denied", null, "Vehicle Type does not align with assigned Role");
         }
 
         LOG.infof("prio requestId=%s user=%s roles=%s resolvedType=%s",
@@ -176,16 +176,17 @@ public class PriorityResource {
                 (currentRequest.getVehicleId() == null &&
                         currentRequest.getVehicleType() == null &&
                         currentRequest.getTrafficLightId() == null)) {
-            return new PriorityResponse("denied", "Request body is required or incomplete");
+            return new PriorityResponse("denied", null, "Request body is required or incomplete");
         }
 
         String vehicleId = currentRequest.getVehicleId();
         if (!isValidVehicleId(vehicleId)) {
-            return new PriorityResponse("denied", "Invalid or missing vehicleId");
+            return new PriorityResponse("denied", null, "Invalid or missing vehicleId");
         }
 
         if (!isValidVehicleType(vehicleType)) {
             return new PriorityResponse("denied",
+                    null,
                     "Invalid vehicleType. Allowed values: emergency-vehicle, mayor-vehicle, other");
         }
 
@@ -196,6 +197,7 @@ public class PriorityResource {
 
         if (this.activeRequestsByVehicle.containsKey(vehicleId)) {
             return new PriorityResponse("denied",
+                    null,
                     "Request with ID: " + this.activeRequestsByVehicle.get(vehicleId) + " already exists.");
         }
 
@@ -264,7 +266,7 @@ public class PriorityResource {
                 } catch (Exception e) {
                     // If the client throws (timeouts, connection errors, etc.)
                     LOG.error("changeState() call threw exception", e);
-                    return new PriorityResponse("denied", "State controller unreachable: " + e.getMessage());
+                    return new PriorityResponse("denied", null, "State controller unreachable: " + e.getMessage());
                 } finally {
                     if (r != null) {
                         try { r.close(); } catch (Exception ignored) {}
@@ -282,7 +284,7 @@ public class PriorityResource {
     public PriorityResponse getRequestStatus(@PathParam("request_id") String requestId) {
         // Input validation
         if (!isValidRequestId(requestId)) {
-            return new PriorityResponse("denied", "Invalid requestId format (must be valid UUID)");
+            return new PriorityResponse("denied", null, "Invalid requestId format (must be valid UUID)");
         }
 
         // TODO Add check if current state = state of priority request and adjust
@@ -308,7 +310,9 @@ public class PriorityResource {
             this.requestQueue.poll();
             this.requestStore.remove(requestId);
             this.activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
-            return new PriorityResponse("accepted", "Traffic Light is already Green. PriorityRequest with ID: "
+            return new PriorityResponse("accepted",
+                    requestId,    
+                "Traffic Light is already Green. PriorityRequest with ID: "
                     + requestId
                     + " was deleted. If you can't pass due to blocking traffic, send another PriorityRequest once you are at the front.");
         }
@@ -338,6 +342,7 @@ public class PriorityResource {
                 if (status / 100 != 2) {
                     return new PriorityResponse(
                         "queued",
+                        requestId,
                         "State controller call failed: HTTP " + status + " " + (body != null ? body : "")
                     );
                 }
@@ -347,12 +352,13 @@ public class PriorityResource {
                     this.requestStore.remove(requestId);
                     this.activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
                     return new PriorityResponse("accepted",
+                            requestId,
                             "Request with Request ID: " + requestId + " accepted. Request is now deleted.");
                         }
             } catch (Exception e) {
                 // If the client throws (timeouts, connection errors, etc.)
                 LOG.error("changeState() call threw exception", e);
-                return new PriorityResponse("denied", "State controller unreachable: " + e.getMessage());
+                return new PriorityResponse("denied", null, "State controller unreachable: " + e.getMessage());
             } finally {
                 if (r != null) {
                     try { r.close(); } catch (Exception ignored) {}
