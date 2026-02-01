@@ -5,6 +5,7 @@ import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.GET;
@@ -57,6 +58,9 @@ public class PriorityResource {
     @Inject
     @RestClient
     PriorityAuditService auditClient;
+
+    @Inject
+    SecurityIdentity identity;
 
     public PriorityResource() {
         Comparator<QueuedRequest> comparator = (r1, r2) -> {
@@ -146,6 +150,28 @@ public class PriorityResource {
         // Input validation
         String requestId = UUID.randomUUID().toString();
 
+                // Decide server-side vehicleType from roles
+        String vehicleType;
+        if (identity.hasRole("emergency-vehicle")) {
+            vehicleType = "emergency-vehicle";
+        } else if (identity.hasRole("mayor-vehicle")) {
+            vehicleType = "mayor-vehicle";
+        } else {
+            // Should never happen because of @RolesAllowed, but keep it safe
+            return new PriorityResponse("denied", "Missing required role");
+        }
+
+        if(!currentRequest.getVehicleType().equals(vehicleType)){
+            return new PriorityResponse("denied", "Vehicle Type does not align with assigned Role");
+        }
+
+        LOG.infof("prio requestId=%s user=%s roles=%s resolvedType=%s",
+                requestId,
+                identity.getPrincipal() != null ? identity.getPrincipal().getName() : "<no-principal>",
+                identity.getRoles(),
+                vehicleType
+        );
+
         if (currentRequest == null ||
                 (currentRequest.getVehicleId() == null &&
                         currentRequest.getVehicleType() == null &&
@@ -158,7 +184,6 @@ public class PriorityResource {
             return new PriorityResponse("denied", "Invalid or missing vehicleId");
         }
 
-        String vehicleType = currentRequest.getVehicleType();
         if (!isValidVehicleType(vehicleType)) {
             return new PriorityResponse("denied",
                     "Invalid vehicleType. Allowed values: emergency-vehicle, mayor-vehicle, other");
