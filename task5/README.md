@@ -715,3 +715,121 @@ kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
 ```
 kubectl exec -n keycloak keycloak-0 -- cat /tmp/group8-task5-realm-import.json > group8-task5-realm-import.json
 ```
+
+## Testing Priority Service
+
+This part will explain how to test the priority service, in regards to managin the priority between mayor - and emergency-vehicles. 
+
+### 0) Setup: Start all clients (in separate tabs)
+
+➡️ Open **three separate tabs** and start one client in each:
+- **State Traffic Management Center Client**
+- **Mayor-Vehicle Client**
+- **Emergency-Vehicle Client**
+
+> IMPORTANT: Before executing any call from a different client, switch to that client's tab first.
+
+---
+
+### 1) Swap traffic state to `yellow` (State Traffic Management Center Client)
+
+➡️ Switch to tab: **State Traffic Management Center Client**
+
+Command:
+```txt
+2 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 yellow
+```
+
+---
+
+### 2) Send Mayor priority request (Mayor-Vehicle Client)
+
+➡️ Switch to tab: **Mayor-Vehicle Client**
+
+Command:
+```txt
+3 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 18fa36b7-7e59-4c6a-955c-f8864c995823
+```
+
+---
+
+### 3) Send Emergency Vehicle priority request (Emergency-Vehicle Client)
+
+Goal: Verify that the emergency vehicle is prioritized over the mayor even though the emergency request is sent later.
+
+➡️ Switch to tab: **Emergency-Vehicle Client**
+
+Command:
+```txt
+3 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 7de3d833-8468-4105-8435-f178b6ff279c
+```
+
+---
+
+### 4) Set traffic light of the prio request to `red` to verify prio request logic (State Traffic Management Center Client)
+
+➡️ Switch to tab: **State Traffic Management Center Client**
+
+Command:
+```txt
+2 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 red
+```
+
+---
+
+### 5) Verify the Mayor request is NOT highest priority (still queued, not accepted)
+
+Expectation: The mayor request should still be in the queue. If it were highest priority, it would be accepted.
+
+➡️ Switch to tab: **Mayor-Vehicle Client**
+
+Command:
+```txt
+4 <request id>
+```
+
+---
+
+### 6) Verify the Emergency Vehicle request IS highest priority (accepted / state changes)
+
+Expectation: By requesting status, you should see that the state changes and the emergency request is accepted.
+
+➡️ Switch to tab: **Emergency-Vehicle Client**
+
+Command:
+```txt
+4 <request id>
+```
+
+---
+
+### 7) Verify the Mayor request is accepted afterwards
+
+Expectation: After the EV request is accepted/handled, the mayor request should become accepted as well.
+
+➡️ Switch to tab: **Mayor-Vehicle Client**
+
+Command:
+```txt
+4 <request id>
+```
+
+---
+
+## What happened and why it worked (expected behavior)
+
+- **Priority requests are only queued while the traffic light is `yellow`. Otherwise requests are accepted immediately.**  
+  That’s why we first switch the traffic state to `yellow` and then send both priority requests. This ensures both requests end up in the **same queue**.
+
+- **We send the Mayor request first, then the Emergency Vehicle request.**  
+  Even though the Mayor request is older, **queue priority rules** should rank the Emergency Vehicle request higher once both are queued.
+
+- **After switching the traffic light to `red`, we validate the queue order via status polling.**  
+  When you request status (`4 <request id>`), the system will either:
+  - **accept** the request (meaning it is currently **#1 / highest priority**), or
+  - respond that it is **not #1** (meaning it stays queued).
+
+- **So the expected outcome is:**
+  1) Polling the **Mayor** request first should **NOT** accept it → proves it is not highest priority.  
+  2) Polling the **Emergency Vehicle** request should **accept** it → proves it is highest priority.  
+  3) Polling the **Mayor** request again afterwards should then **accept** it → because the higher priority request has been handled.
