@@ -822,12 +822,12 @@ Command:
   That’s why we first switch the traffic state to `yellow` and then send both priority requests. This ensures both requests end up in the **same queue**.
 
 - **We send the Mayor request first, then the Emergency Vehicle request.**  
-  Even though the Mayor request is older, **queue priority rules** should rank the Emergency Vehicle request higher once both are queued.
+  Even though the Mayor request is older, **priority queue rules** should rank the Emergency Vehicle request higher once both are queued.
 
 - **After switching the traffic light to `red`, we validate the queue order via status polling.**  
   When you request status (`4 <request id>`), the system will either:
   - **accept** the request (meaning it is currently **#1 / highest priority**), or
-  - respond that it is **not #1** (meaning it stays queued).
+  - respond that it is **queued** (meaning it isn't highest priority).
 
 - **So the expected outcome is:**
   1) Polling the **Mayor** request first should **NOT** accept it → proves it is not highest priority.  
