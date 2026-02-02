@@ -1,3 +1,38 @@
+## Bonus Information. (Not relevant for deployment)
+
+### exporting quarkus realm:
+
+To redeploy the realm across multiple systems you need to first export it.
+
+#### 1. Set the current namespace to keycloak
+
+```
+kubectl config set-context --current --namespace=keycloak
+```
+
+#### 2. Export the realm to a file inside the pod
+
+```
+kubectl exec -n keycloak keycloak-0 -- \
+  /opt/keycloak/bin/kc.sh export --optimized \
+  --http-management-port=9002 \
+  --file /tmp/group8-task5-realm-import.json
+```
+
+#### 3. Confirm it exists
+
+```
+kubectl exec -n keycloak keycloak-0 -- ls -lah /tmp | grep group8-task5
+```
+
+#### 4. Copy it out without kubectl cp (no tar needed)
+
+```
+kubectl exec -n keycloak keycloak-0 -- cat /tmp/group8-task5-realm-import.json > group8-task5-realm-import.json
+```
+
+# get token
+
 ```
 TOKEN=$(curl -s --cacert certs/ca.crt \
   -d grant_type=client_credentials \
