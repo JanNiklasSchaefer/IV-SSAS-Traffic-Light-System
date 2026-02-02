@@ -1,8 +1,36 @@
-## Task 5 – Access Controll
+## Task 6: Functionality and tests
 
-### REST API Specification Table View
+### Public Endpoints Overview
 
-TODO: Add endpoints
+The TCC system provides the following public endpoints for client applications:
+
+#### Priority Service (Vehicle Clients)
+
+- `POST /api/priority/requests` - Submit priority request
+  - **Body:** `PriorityRequest` {vehicleType, vehicleId, trafficLightId}
+  - **Response:** `PriorityResponse` {status, requestId}
+- `GET /api/priority/requests/{requestId}` - Check priority request status
+  - **Path:** requestId (UUID)
+  - **Response:** `PriorityResponse` {status, requestId}
+
+#### Status Service (All Vehicle Clients)
+
+- `GET /api/status/traffic?traffic-light-id={uuid}` - Get specific traffic light status
+  - **Query:** trafficLightId (UUID)
+  - **Response:** `TrafficStatus` {trafficLightId, timestamp, state, pedestrianState}
+- `GET /api/status/traffic-lights` - Get all traffic lights
+  - **Response:** `Array<TrafficLightId>` [{uuid, latitude, longitude, direction}]
+
+#### State Controller (TCC Operator)
+
+- `GET /api/state/management/state` - Get complete intersection status
+  - **Response:** `Array<TrafficStatus>` - Status of all lights at intersection
+- `PUT /api/state/management/change-state` - Manually change traffic light
+  - **Query:** trafficLightId (UUID)
+  - **Body:** goalState (String: "red", "yellow", "green")
+  - **Response:** Success/Error message
+
+All endpoints require JWT authentication and implement role-based access control.
 
 ### Prerequisites
 
@@ -294,7 +322,146 @@ An example call for the endpoint https://tcc.test/api/status/traffic?vehicle={Bo
 - The 4th "4" option is a demo run to make testing the clients easier.
 - The 5th option "q" shuts off the client.
 
-# Implementation Details 
+## Why common-models?
+
+The `common-models` module was created to centralize all data structures used across multiple microservices. This ensures consistency, reusability, and maintainability of core domain objects like GPS coordinates, traffic light states, and intersection representations. All microservices depend on this shared module to access validated and tested data structures.
+
+## Data Structures
+
+### TrafficLightId Class
+
+This class identifies traffic lights uniquely. It uses GPS coordinates and validates locations within Duckburg city.
+
+**Main Parts:**
+
+- `GPSCoordinate latitude` - North/South position (degrees, minutes, seconds)
+- `GPSCoordinate longitude` - East/West position (degrees, minutes, seconds)
+- `UUID uuid` - Unique ID for each traffic light
+- `String direction` - Direction like "north-south" or "east-west"
+
+**GPS Rules:**
+
+- **Duckburg Area:** Only allows coordinates within the city (latitude 37-38°N, longitude 120-122°W)
+- **No Pacific Ocean:** Avoids 180°E/W coordinates as specified: "Please try to avoid placing Duckburg somewhere in the Pacific Ocean; this may cause problems at 180°E/W"
+- **Valid Format:** Checks degrees/minutes/seconds are correct
+- **Type Safety:** Makes sure latitude and longitude are not mixed up
+
+**Important Methods:**
+
+- Constructor checks GPS coordinates are in Duckburg
+- `validateLocation()` - Re-checks coordinates after changes
+- `equals()`/`hashCode()` - Uses UUID for comparisons
+
+### TrafficStatus Class
+
+This class shows the current state of a traffic light with time and pedestrian signals.
+
+**Main Parts:**
+
+- `TrafficLightId trafficLightId` - Which traffic light this is
+- `Instant timestamp` - When this status was recorded
+- `String state` - Light color ("red", "yellow", "green")
+- `String pedestrianState` - Pedestrian light state
+
+**State Rules:**
+
+- **Red Light:** `pedestrianState = "green"` (pedestrians can walk)
+- **Yellow Light:** `pedestrianState = "yellow"` (be careful)
+- **Green Light:** `pedestrianState = "red"` (cars go, pedestrians wait)
+- **Other States:** `pedestrianState = "unknown"` (safe default)
+
+**Important Methods:**
+
+- Constructor sets pedestrian state automatically
+- `setState()` - Changes both car and pedestrian lights
+- Handles errors safely
+
+### GPSCoordinate Class
+
+Helper class for GPS positions in DMS format (Degrees, Minutes, Seconds).
+
+**References:**
+
+- [Geographic Coordinate System](https://en.wikipedia.org/wiki/Geographic_coordinate_system)
+- [World Geodetic System WGS84](https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84)
+
+**Main Parts:**
+
+- `int degrees` - Degree part
+- `int minutes` - Minute part (0-59)
+- `double seconds` - Second part (0-59.999...)
+- `boolean isLatitude` - True for north/south, false for east/west
+
+**Rules:**
+
+- **Latitude:** Must be -90° to 90°
+- **Longitude:** Must be -180° to 180°
+- **Format Check:** Minutes and seconds must be valid
+- **Type Safety:** Prevents mixing latitude and longitude
+- **Duckburg Protection:** Avoids Pacific Ocean coordinates (180°E/W)
+
+**Important Methods:**
+
+- `toDecimalDegrees()` - Converts to decimal format
+- `fromDecimalDegrees()` - Creates from decimal numbers
+- `toString()` - Shows coordinates like "37°30'15\"N"
+
+### Intersection Decision
+
+**Decision:** Use `List<TrafficStatus>` for all lights at an intersection.
+
+**Why:**
+
+- Each `TrafficStatus` has the traffic light ID, time, and state
+- Works with any number of lights per intersection
+- Easy to loop through and check all lights
+- Supports different intersection types
+
+## Testing Data Structures
+
+### How to Run Tests
+
+#### Run All Tests
+
+```bash
+# Run all unit tests
+cd common-models
+
+mvn test
+```
+
+#### Run Specific Tests
+
+```bash
+# Test specific class
+cd common-models
+mvn test -Dtest=TrafficLightIdTest
+
+```
+
+### Unit Tests Overview
+
+| Test Class           | Number of Tests | What is Tested                      |
+| -------------------- | --------------- | ----------------------------------- |
+| `TrafficLightIdTest` | 18 tests        | GPS validation, Duckburg area, UUID |
+| `TrafficStatusTest`  | 8 tests         | Light states, pedestrian logic      |
+| `GPSCoordinateTest`  | 17 tests        | DMS format, conversion, ranges      |
+| **Total**            | **43 tests**    | **Complete validation**             |
+
+### Security Features
+
+- **GPS Check:** Only allows traffic lights in Duckburg city area
+- **UUID Check:** Each traffic light has unique ID
+- **State Check:** Only allows valid light colors
+- **Error Handling:** Prevents crashes from bad input
+
+The data structures follow all task requirements and provide a solid base for the TCC traffic control system.
+
+### Input Validation
+
+We have implemented comprehensive input validation for public endpoints to ensure data integrity and security. The Priority Service validates vehicle requests with checks for vehicle types, IDs, and traffic light locations. The Status Service validates traffic light queries with proper UUID format checking. For detailed validation specifications and test cases, see [validation.md](validation.md).
+
+### Testing Security Implementation
 
 
 ## `traffic-light-devices`
@@ -500,6 +667,7 @@ This part will explain how to test the priority service, in regards to managing 
 ### 0) Setup: Start all clients (in separate tabs)
 
 ➡️ Open **three separate tabs** and start one client in each:
+
 - **State Traffic Management Center Client**
 - **Mayor-Vehicle Client**
 - **Emergency-Vehicle Client**
@@ -513,6 +681,7 @@ This part will explain how to test the priority service, in regards to managing 
 ➡️ Switch to tab: **State Traffic Management Center Client**
 
 Command:
+
 ```txt
 2 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 yellow
 ```
@@ -524,6 +693,7 @@ Command:
 ➡️ Switch to tab: **Mayor-Vehicle Client**
 
 Command:
+
 ```txt
 3 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 18fa36b7-7e59-4c6a-955c-f8864c995823
 ```
@@ -537,6 +707,7 @@ Goal: Verify that the emergency vehicle is prioritized over the mayor even thoug
 ➡️ Switch to tab: **Emergency-Vehicle Client**
 
 Command:
+
 ```txt
 3 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 7de3d833-8468-4105-8435-f178b6ff279c
 ```
@@ -548,6 +719,7 @@ Command:
 ➡️ Switch to tab: **State Traffic Management Center Client**
 
 Command:
+
 ```txt
 2 8d8d1437-907b-3a79-900a-c5f0ea1f5c73 red
 ```
@@ -561,6 +733,7 @@ Expectation: The mayor request should still be in the queue. If it were highest 
 ➡️ Switch to tab: **Mayor-Vehicle Client**
 
 Command:
+
 ```txt
 4 <request id>
 ```
@@ -574,6 +747,7 @@ Expectation: By requesting status, you should see that the state changes and the
 ➡️ Switch to tab: **Emergency-Vehicle Client**
 
 Command:
+
 ```txt
 4 <request id>
 ```
@@ -587,6 +761,7 @@ Expectation: After the EV request is accepted/handled, the mayor request should 
 ➡️ Switch to tab: **Mayor-Vehicle Client**
 
 Command:
+
 ```txt
 4 <request id>
 ```
@@ -607,6 +782,6 @@ Command:
   - respond that it is **queued**.
 
 - **So the expected outcome is:**
-  1) Polling the **Mayor** request first should **NOT** accept it → proves it is not highest priority.  
-  2) Polling the **Emergency Vehicle** request should **accept** it → proves it is highest priority.  
-  3) Polling the **Mayor** request again afterwards should then **accept** it → because the higher priority request has been handled.
+  1. Polling the **Mayor** request first should **NOT** accept it → proves it is not highest priority.
+  2. Polling the **Emergency Vehicle** request should **accept** it → proves it is highest priority.
+  3. Polling the **Mayor** request again afterwards should then **accept** it → because the higher priority request has been handled.
