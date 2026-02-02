@@ -2838,6 +2838,14 @@
         "containerId" : "3fb56792-3747-42b3-9274-ca5bfcbb9b6a",
         "attributes" : { }
       }, {
+        "id" : "52912723-c006-45bb-9160-e303685f5e0b",
+        "name" : "tcc-status-service",
+        "description" : "",
+        "composite" : false,
+        "clientRole" : true,
+        "containerId" : "3fb56792-3747-42b3-9274-ca5bfcbb9b6a",
+        "attributes" : { }
+      }, {
         "id" : "f7436d7f-2711-4bc4-b12a-f6510981a362",
         "name" : "tcc-priority-service-audit-role",
         "description" : "role for tcc-priority-service to access audit-service",
@@ -3112,6 +3120,7 @@
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-group8-task5" ],
     "clientRoles" : {
+      "tcc-audit-service" : [ "tcc-status-service" ],
       "traffic-light-device" : [ "tcc-status-service-light-service" ]
     },
     "notBefore" : 0,
