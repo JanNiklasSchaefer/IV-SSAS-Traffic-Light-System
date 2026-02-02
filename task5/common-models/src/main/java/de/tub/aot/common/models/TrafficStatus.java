@@ -25,6 +25,9 @@ public class TrafficStatus {
         if (state == null) {
             throw new IllegalArgumentException("State cannot be null");
         }
+        if(!state.equals("red") && !state.equals("yellow")  && !state.equals("green")){
+            throw new IllegalArgumentException("State can only be green, yellow or red.");
+        }
 
         this.trafficLightId = trafficLightId;
         this.timestamp = timestamp != null ? timestamp : Instant.now();
@@ -35,7 +38,6 @@ public class TrafficStatus {
             case "green" -> this.pedestrianState = "red";
             case "yellow" -> this.pedestrianState = "yellow";
             case "red" -> this.pedestrianState = "green";
-            default -> this.pedestrianState = "unknown";
         }
     }
 

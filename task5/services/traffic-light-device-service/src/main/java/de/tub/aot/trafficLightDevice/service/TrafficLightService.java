@@ -79,26 +79,26 @@ public class TrafficLightService {
     So East - west Traffic light is in middle of longitude wise of South - North 
     And North-south is in middle lattitude wise of east-west
     */ 
-    GPSCoordinate lattitudeNorth = new GPSCoordinate(37, 30, 30.0, true);
-    GPSCoordinate longitudeNorth = new GPSCoordinate(-121, 30, 29.0, false);
+    GPSCoordinate lattitudeNorth = new GPSCoordinate(37, 30, 31.0, true);
+    GPSCoordinate longitudeNorth = new GPSCoordinate(-121, 30, 30.0, false);
     String key = "north"; 
     this.northId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
     this.northTrafficLight = new TrafficLightId(lattitudeNorth, longitudeNorth, this.northId, "north-south");
 
-    GPSCoordinate lattitudeSouth = new GPSCoordinate(37, 30, 30.0, true);
-    GPSCoordinate longitudeSouth = new GPSCoordinate(-121, 30, 31.0, false);
+    GPSCoordinate lattitudeSouth = new GPSCoordinate(37, 30, 29.0, true);
+    GPSCoordinate longitudeSouth = new GPSCoordinate(-121, 30, 30.0, false);
     key = "south"; 
     this.southId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
     this.southTrafficLight = new TrafficLightId(lattitudeSouth, longitudeSouth, this.southId, "south-north");
 
-    GPSCoordinate lattitudeWest = new GPSCoordinate(37, 30, 29.0, true);
-    GPSCoordinate longitudeWest = new GPSCoordinate(-121, 30, 30.0, false);
+    GPSCoordinate lattitudeWest = new GPSCoordinate(37, 30, 30.0, true);
+    GPSCoordinate longitudeWest = new GPSCoordinate(-121, 30, 29.0, false);
     key = "west"; 
     this.westId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
     this.westTrafficLight = new TrafficLightId(lattitudeWest, longitudeWest, this.westId,"west-east");
 
-    GPSCoordinate lattitudeEast = new GPSCoordinate(37, 30, 31.0, true);
-    GPSCoordinate longitudeEast = new GPSCoordinate(-121, 30, 30.0, false);
+    GPSCoordinate lattitudeEast = new GPSCoordinate(37, 30, 30.0, true);
+    GPSCoordinate longitudeEast = new GPSCoordinate(-121, 30, 31.0, false);
     key = "east"; 
     this.eastId = UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
     this.eastTrafficLight = new TrafficLightId(lattitudeEast, longitudeEast, this.eastId, "east-west");

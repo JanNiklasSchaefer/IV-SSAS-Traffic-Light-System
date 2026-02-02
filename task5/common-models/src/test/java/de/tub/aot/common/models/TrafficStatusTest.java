@@ -118,13 +118,13 @@ class TrafficStatusTest {
     }
 
     @Test
-    void testDefaultPedestrianState() {
+    void testForFaultyTrafficState() {
         TrafficLightId trafficLight = createTestTrafficLight();
         Instant timestamp = Instant.now();
 
         // Test unknown state
-        TrafficStatus status = new TrafficStatus(trafficLight, timestamp, "unknown");
-        assertEquals("unknown", status.getState());
-        assertEquals("unknown", status.getPedestrianState()); // Unknown states get "unknown" pedestrian state
+        assertThrows(IllegalArgumentException.class, () -> {
+            new TrafficStatus(trafficLight, timestamp, "orange");
+        });
     }
 }
