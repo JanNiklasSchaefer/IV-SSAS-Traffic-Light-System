@@ -292,15 +292,13 @@ TOKEN=$(curl -vk \
 echo "LEN=${#TOKEN}"            # If this is greater than 0 we have gotten an access_token from keycloak.
 ```
 
-### Call: Traffic Light Device
+### Call: Audit Service
 
 ```bash
-curl -v -X POST \
+curl -v \
   --cacert /etc/tls/ca.crt \
   --cert /etc/tls/tls.crt \
   --key /etc/tls/tls.key \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{}' \
-  "https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443/api/device/change-state"
+  "https://gruppe8-tcc-audit-service.gruppe8-tcc.svc.cluster.local:443/api/audit/logs?from=0&to=9999999999999"
 ```

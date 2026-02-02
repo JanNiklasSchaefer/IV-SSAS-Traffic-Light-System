@@ -26,7 +26,7 @@ public class AuditResource {
     @Path("/events")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role"})
+    @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role", "tcc-status-service"})
     public Response logEvent(AuditObject auditEvent) {
         auditLogs.add(auditEvent);
         return Response.ok().build();
@@ -35,7 +35,7 @@ public class AuditResource {
     @GET
     @Path("/logs")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role"})
+    @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role", "tcc-status-service"})
     public Response getLogs(@QueryParam("from") long from, @QueryParam("to") long to) {
         // basic validation
         if (from < 0 || to < 0) {
