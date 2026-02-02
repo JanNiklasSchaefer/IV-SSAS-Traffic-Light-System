@@ -465,6 +465,7 @@ We have implemented comprehensive input validation for public endpoints to ensur
 
 # Implementation Details
 
+----
 
 ## `traffic-light-devices`
 
