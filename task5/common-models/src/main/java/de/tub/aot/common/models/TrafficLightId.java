@@ -36,12 +36,11 @@ public class TrafficLightId {
         validateDuckburgLocation();
     }
 
-
-    public void setDirection(String direction){
+    public void setDirection(String direction) {
         this.direction = direction;
     }
 
-    public String getDirection(){
+    public String getDirection() {
         return this.direction;
     }
 

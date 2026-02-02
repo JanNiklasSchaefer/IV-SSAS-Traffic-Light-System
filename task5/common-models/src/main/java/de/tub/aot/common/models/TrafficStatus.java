@@ -1,4 +1,5 @@
 package de.tub.aot.common.models;
+
 import java.time.Instant;
 
 /**
@@ -18,12 +19,24 @@ public class TrafficStatus {
     private String pedestrianState;
 
     public TrafficStatus(TrafficLightId trafficLightId, Instant timestamp, String state) {
+        if (trafficLightId == null) {
+            throw new IllegalArgumentException("TrafficLightId cannot be null");
+        }
+        if (state == null) {
+            throw new IllegalArgumentException("State cannot be null");
+        }
+
         this.trafficLightId = trafficLightId;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp != null ? timestamp : Instant.now();
         this.state = state;
-        if(state.equals("green")) this.pedestrianState = "red";
-        if(state.equals("yellow")) this.pedestrianState = "yellow";
-        if(state.equals("red")) this.pedestrianState = "green";
+
+        // Set pedestrian state based on traffic state
+        switch (state) {
+            case "green" -> this.pedestrianState = "red";
+            case "yellow" -> this.pedestrianState = "yellow";
+            case "red" -> this.pedestrianState = "green";
+            default -> this.pedestrianState = "unknown";
+        }
     }
 
     public TrafficLightId getTrafficLightId() {
@@ -42,7 +55,7 @@ public class TrafficStatus {
         this.timestamp = timestamp;
     }
 
-    public String getPedestrianState(){
+    public String getPedestrianState() {
         return this.pedestrianState;
     }
 
@@ -62,8 +75,11 @@ public class TrafficStatus {
      */
     public void setState(String state) {
         this.state = state;
-        if(state.equals("green")) this.pedestrianState = "red";
-        if(state.equals("yellow")) this.pedestrianState = "yellow";
-        if(state.equals("red")) this.pedestrianState = "green";
+        if (state.equals("green"))
+            this.pedestrianState = "red";
+        if (state.equals("yellow"))
+            this.pedestrianState = "yellow";
+        if (state.equals("red"))
+            this.pedestrianState = "green";
     }
 }
