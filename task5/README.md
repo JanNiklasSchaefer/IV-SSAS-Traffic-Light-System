@@ -463,13 +463,206 @@ We have implemented comprehensive input validation for public endpoints to ensur
 
 ### Testing Security Implementation
 
-#### Internal Tests (from inside the cluster)
 
-We provide an additional guide to test our internal access policy in the file [testing-access-endpoints.md](testing-access-endpoints.md).
+## `traffic-light-devices`
+
+This service was substantially refactored to meet the task requirements. Each traffic light is represented by a `TrafficStatus` object, which includes a `TrafficLightId` (see section above for details). The UUID for each light is derived deterministically from a fixed key, ensuring that the same traffic light receives the same identifier across different systems and test environments.
+
+### Intersection-wide state changes
+
+A state change requested for a single traffic light always applies to the entire intersection. The state transition is implemented as a three-step sequence:
+
+1. **Initiate transition:** set all lights to **yellow**.
+2. **Clearance phase:** wait **15 seconds** to allow the intersection to clear. We assume vehicles that previously had red remain stopped, and vehicles that previously had green stop once yellow is active.
+3. **Swap phases:** flip each traffic light’s state:
+
+   * **red → green**
+   * **green → red**
+
+In real-world traffic control, this logic is more nuanced (e.g., not all signals switch to yellow simultaneously). For this project, a simplified intersection model was chosen to keep the implementation deterministic and easier to test.
+
+### Concurrency and request handling
+
+Because the yellow phase lasts 15 seconds, a state-change request doesn’t return immediately—the client that initiates it has to wait until the transition is finished. While the intersection is in that transition, we reject any other state-change requests with **HTTP `409 Conflict`** (clients can just retry once the switch is done).
+
+We do this to avoid overlapping transitions. If two state changes were accepted at the same time, the intersection could end up in an unsafe mix of signals. Status requests are still allowed during the transition and will simply report `"yellow"`.
+
+### Restricted Traffic States
+
+Regular state-change requests may only set the intersection to **red** or **green**. Only the `traffic-management-center-client` is allowed to set the intersection to **yellow**, using a dedicated endpoint implemented for testing purposes.
+
+This endpoint must be used with extreme caution: forcing the intersection into a permanent yellow state blocks traffic flow. Once the intersection is explicitly set to yellow, only the `traffic-management-center-client` is permitted to restore normal operation. All other state-change requests are denied while the intersection is locked in this mode to prevent unsafe or inconsistent behavior.
+
+### Vehicle vs. pedestrian signals
+
+Each traffic light maintains two internal signal states:
+
+* `state`: vehicle state
+* `pedestrianState` : pedestrian state
+
+These are always opposite (vehicle green ↔ pedestrian red, and vice versa), except during the **yellow** phase. This constraint is verified in unit tests.
+
+Additionally, opposing directions always share the same phase:
+
+* **north–south** matches **south–north**
+* **west–east** matches **east–west**
+
+---
+
+## `tcc-status-service` — Implementation decisions
+
+The `tcc-status-service` is one of the two externally accessible services and exposes the following endpoints:
+
+* `/api/status/traffic-lights`
+* `/api/status/traffic`
+
+### `/api/status/traffic-lights` — intersection metadata
+
+This endpoint provides static metadata describing the intersection, returning the `TrafficLightId` for each light. The UUIDs are generated deterministically, external clients will always receive the same identifiers and metadata across deployments.
+
+Expected Traffic Light Metadata:
+
+```bash
+---------
+Traffic Light UUID: 8d8d1437-907b-3a79-900a-c5f0ea1f5c73
+Direction: north-south
+Longitude Coordinate: 121°30'30"W
+Latitude Coordinate: 37°30'31"N
+---------
+Traffic Light UUID: 50fd76e3-3fe5-3961-bc5c-a99008af8904
+Direction: south-north
+Longitude Coordinate: 121°30'30"W
+Latitude Coordinate: 37°30'29"N
+---------
+Traffic Light UUID: da4f0053-a5c1-3882-a688-52ae2da2e466
+Direction: west-east
+Longitude Coordinate: 121°30'29"W
+Latitude Coordinate: 37°30'30"N
+---------
+Traffic Light UUID: 320381db-f7cd-3f31-804b-aa6b36e1c682
+Direction: east-west
+Longitude Coordinate: 121°30'31"W
+Latitude Coordinate: 37°30'30"N
+---------
+```
+
+### Query model
+
+Clients use this metadata to query the `TrafficStatus` of an individual traffic light. Since the intersection behaves as a coupled system (a change in one direction implies the corresponding states of the others), we intentionally implemented status queries per light. Retrieving the full intersection state can be performed by querying each traffic light individually; our external client includes a convenience function to aggregate these responses.
+
+## `tcc-priority-service` — Implementation decisions
+
+The priority service is responsible for handling priority-based traffic light changes (emergency vehicle & mayor-vehicle). It exposes two public endpoints:
+
+* `POST /api/requests`
+  Body:
+
+  ```json
+  { "trafficLightId": "<UUID>", "vehicleType": "<String>", "vehicleId": "<UUID>" }
+  ```
+* `GET /api/requests/{requestId}`
+
+### `POST /api/requests` — submit a `PriorityRequest`
+
+Submitting a priority request can lead to three outcomes:
+
+1. **Accepted**
+   If the intersection is currently in a **red** or **green** phase , the request is accepted.
+
+   * If the requested traffic light is already green, the server accepts the request without changing the intersection state.
+   * Otherwise, a state change is  triggered.
+
+2. **Queued**
+   If the intersection is currently in the **yellow** phase, the request is queued.
+
+3. **Denied**
+   Requests are rejected if the requester is not authorized or if the payload is invalid/malformed.
+
+If a vehicle with the same `vehicleId` submits another request while it already has a queued request, the service rejects the new submission and returns the existing `requestId`.
+
+### `GET /api/requests/{requestId}` — poll request status
+
+Queued requests are tracked by polling. When querying a request status the following is possible:
+
+1. **Accepted**
+   If the traffic light is already green, the request can be accepted immediately.
+   Otherwise the request is accepted if it has the highest priority.
+
+   After a request is accepted, it is deleted from the server.
+
+2. **Queued**
+   The request stays queued if:
+
+   * another request currently has higher priority, or
+   * the requested traffic light is not green yet.
+
+### Expiration / cleanup
+
+To prevent stale requests from blocking the system, the service removes any `PriorityRequest` that has not been polled for 60 seconds. This ensures the queue cannot be clogged by abandoned requests.
+
+### Priority order
+
+Requests are stored in a `PriorityQueue` with a custom comparator:
+
+* **Primary ordering:** `emergency-vehicle` > `mayor-vehicle`
+* **Tie-breaker:** server-side timestamp (older requests first)
+
+### Role validation
+
+Clients include the `vehicleType` in the request body, which means it could be faked by simply sending a different value (e.g., claiming to be an emergency vehicle). To prevent this, the service compares the role/claims in the access token with the provided `vehicleType`. If they don’t match, the request is rejected.
+
+Repeated mismatches are a strong indicator of misuse or a faulty client. These events can be logged and used to identify and block malicious actors. Automatic banning is not implemented yet, but the service is designed so it can be added later.
+
+
+### Important limitation
+
+The service cannot verify whether a vehicle actually passed the intersection after its request was accepted. Doing so would require verification of the vehicle location, which is out of scope of this task. For that reason, accepted requests are always removed immediately. If a vehicle misses its window (e.g., it gets delayed), it must submit a new `PriorityRequest` once it is ready to cross again.
+
+## `traffic-management-center-client` — Implementation decisions
+
+The `traffic-management-center-client` is an administrative client included as part of this project. It can access two management-only endpoints:
+
+* `GET /api/state/management/state`
+* `POST /api/state/management/change-state?traffic-light-id={UUID}`
+  Body:
+
+  ```json
+  { "goalStatus": "<String>" }
+  ```
+
+### Query intersection state
+
+`GET /api/state/management/state` returns the current state of the entire intersection. This endpoint exists only for the management client and is not available to regular external clients.
+
+### Manual intersection control
+
+The management client provides a dedicated endpoint to manually control the intersection state.
+A request to `POST /api/state/management/change-state` applies a intersection-wide state change based on:
+
+* `traffic-light-id`: id of the traffic light
+* `goalStatus`: the target state (`green`, `red`, or `yellow`)
+
+This is the only interface allowed to set all lights to yellow, and the only one allowed to restore the intersection back to normal operation after it was forced into yellow.
+
+### Safety and consistency rules
+
+For safety reasons, the management client follows the same transition-locking behavior as normal clients:
+
+* If a normal client has already triggered a state transition (yellow phase), management requests are also denied until the transition completes.
+* The management client cannot change a single traffic light in isolation. All state changes apply to the entire intersection to avoid inconsistent signal combinations and to keep opposing directions synchronized.
+
+## Deletion of `tcc-shared-services`
+
+In the initial design, we planned two additional shared services: a **location validator** and a **time service**. During implementation, both were removed.
+
+* **Location validator:** Verifying the physical location of vehicles would require additional assumptions and data sources and after feedback was determined to be outside the scope of this course project. As a result, the location validation service was deleted.
+
+* **Time service:** This was originally intended to validate timestamps on priority requests. We later simplified the design by generating and attaching timestamps exclusively on the server side, rather than accepting them from clients. This prevents timestamp spoofing without requiring a separate service, so the time service was removed as well.
+
 
 ## Testing Priority Service
 
-This part will explain how to test the priority service, in regards to managin the priority between mayor - and emergency-vehicles.
+This part will explain how to test the priority service, in regards to managing the priority between mayor - and emergency-vehicles. 
 
 ### 0) Setup: Start all clients (in separate tabs)
 
@@ -578,15 +771,15 @@ Command:
 ## What happened and why it worked (expected behavior)
 
 - **Priority requests are only queued while the traffic light is `yellow`. Otherwise requests are accepted immediately.**  
-  That’s why we first switch the traffic state to `yellow` and then send both priority requests. This ensures both requests end up in the **same queue**.
+  That’s why we first switch the traffic state to `yellow` and then send both priority requests. This ensures both requests end up in the same queue.
 
 - **We send the Mayor request first, then the Emergency Vehicle request.**  
-  Even though the Mayor request is older, **priority queue rules** should rank the Emergency Vehicle request higher once both are queued.
+  Even though the Mayor request is older, the priority queue rules should rank the Emergency Vehicle request higher once both are queued.
 
 - **After switching the traffic light to `red`, we validate the queue order via status polling.**  
   When you request status (`4 <request id>`), the system will either:
-  - **accept** the request (meaning it is currently **#1 / highest priority**), or
-  - respond that it is **queued** (meaning it isn't highest priority).
+  - **accept** the request is highest priority, or
+  - respond that it is **queued**.
 
 - **So the expected outcome is:**
   1. Polling the **Mayor** request first should **NOT** accept it → proves it is not highest priority.
