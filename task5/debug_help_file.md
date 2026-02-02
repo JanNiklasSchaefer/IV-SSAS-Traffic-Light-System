@@ -232,3 +232,75 @@ curl -v -X PUT \
   -d 'green' \
   "https://tcc.test/api/state/management/change-state?traffic-light-id=8d8d1437-907b-3a79-900a-c5f0ea1f5c73"
 ```
+
+
+## 1️⃣ Create TLS Debug Pod
+
+```bash
+kubectl -n gruppe8-testing run tls-debug \
+  --image=curlimages/curl:8.5.0 \
+  --restart=Never \
+  --overrides='
+{
+  "spec": {
+    "containers": [{
+      "name": "curl",
+      "image": "curlimages/curl:8.5.0",
+      "command": ["sh","-c","sleep 3600"],
+      "stdin": true,
+      "tty": true,
+      "volumeMounts": [
+        {"name":"certs","mountPath":"/etc/tls","readOnly":true}
+      ]
+    }],
+    "volumes": [
+      {"name":"certs","secret":{"secretName":"gruppe8-task4-testing-cert-tls"}}
+    ]
+  }
+}'
+```
+
+---
+
+## 2️⃣ Exec into Debug Pod
+
+```bash
+kubectl -n gruppe8-testing exec -it tls-debug -- sh
+```
+
+
+
+Delete the pod:
+
+```bash
+kubectl delete pod tls-debug -n gruppe8-testing
+```
+
+## test calls:
+
+## 3️⃣ Get new token for tcc-state-controller and call authorized endpoints
+
+```bash
+TOKEN=$(curl -vk \
+  --cacert /etc/tls/ca.crt \
+  -d grant_type=client_credentials \
+  -d client_id=tcc-state-controller \
+  -d client_secret=MEb3nfjgTGkEHiZs8NugXxKTf2UqHdVC \
+  https://keycloak-service.keycloak.svc.cluster.local:8443/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+echo "LEN=${#TOKEN}"            # If this is greater than 0 we have gotten an access_token from keycloak.
+```
+
+### Call: Traffic Light Device
+
+```bash
+curl -v -X POST \
+  --cacert /etc/tls/ca.crt \
+  --cert /etc/tls/tls.crt \
+  --key /etc/tls/tls.key \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  "https://gruppe8-traffic-light-device-service.gruppe8-traffic-light-devices.svc.cluster.local:443/api/device/change-state"
+```
