@@ -240,7 +240,7 @@ public class PriorityResource {
                 LOG.warn("Audit Service call failed: " + e.getMessage());
             }
             return new PriorityResponse("denied",
-                    null,
+                    this.activeRequestsByVehicle.get(vehicleId),
                     "Request with ID: " + this.activeRequestsByVehicle.get(vehicleId) + " already exists.");
         }
 
