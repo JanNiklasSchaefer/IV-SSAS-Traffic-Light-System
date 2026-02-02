@@ -310,17 +310,19 @@ This opens an interactive Quarkus Client, from which the public API Endpoints ca
 q                                 → Quit
 ```
 
-An example call for the endpoint https://tcc.test/api/status/traffic?vehicle={Boolean} would be:
+An example call for the endpoint https://tcc.test/api/status/traffic?traffic-light-id={UUID} would be:
 
 ```
 2 8d8d1437-907b-3a79-900a-c5f0ea1f5c73
 ```
 
-**Note:** This calls the endpoint /api/status/traffic?vehicle={Boolean} with the Boolean value `true`
+**Note:** This calls the endpoint /api/status/traffic?traffic-light-id={UUID} with the UUID value `8d8d1437-907b-3a79-900a-c5f0ea1f5c73`
 
-- The first 3 options are manual calls to the endpoints with the possibility to input the parameters.
-- The 4th "4" option is a demo run to make testing the clients easier.
-- The 5th option "q" shuts off the client.
+- The first 2 options are calls for the `tcc-status-service`
+- The 3rd and 4th options are the endpoints of the `tcc-priority-service`
+- The 5th option combines the first 2 endpoints to query the whole intersection state
+- The 6th option runs a demo of all endpoints. Depending on the internal state, the output will differ
+- The 7th option quits the client
 
 ## Why common-models?
 
@@ -461,7 +463,7 @@ The data structures follow all task requirements and provide a solid base for th
 
 We have implemented comprehensive input validation for public endpoints to ensure data integrity and security. The Priority Service validates vehicle requests with checks for vehicle types, IDs, and traffic light locations. The Status Service validates traffic light queries with proper UUID format checking. For detailed validation specifications and test cases, see [validation.md](validation.md).
 
-### Testing Security Implementation
+# Implementation Details
 
 
 ## `traffic-light-devices`
@@ -550,6 +552,8 @@ Latitude Coordinate: 37°30'30"N
 
 Clients use this metadata to query the `TrafficStatus` of an individual traffic light. Since the intersection behaves as a coupled system (a change in one direction implies the corresponding states of the others), we intentionally implemented status queries per light. Retrieving the full intersection state can be performed by querying each traffic light individually; our external client includes a convenience function to aggregate these responses.
 
+---
+
 ## `tcc-priority-service` — Implementation decisions
 
 The priority service is responsible for handling priority-based traffic light changes (emergency vehicle & mayor-vehicle). It exposes two public endpoints:
@@ -618,6 +622,8 @@ Repeated mismatches are a strong indicator of misuse or a faulty client. These e
 
 The service cannot verify whether a vehicle actually passed the intersection after its request was accepted. Doing so would require verification of the vehicle location, which is out of scope of this task. For that reason, accepted requests are always removed immediately. If a vehicle misses its window (e.g., it gets delayed), it must submit a new `PriorityRequest` once it is ready to cross again.
 
+---
+
 ## `traffic-management-center-client` — Implementation decisions
 
 The `traffic-management-center-client` is an administrative client included as part of this project. It can access two management-only endpoints:
@@ -651,6 +657,8 @@ For safety reasons, the management client follows the same transition-locking be
 * If a normal client has already triggered a state transition (yellow phase), management requests are also denied until the transition completes.
 * The management client cannot change a single traffic light in isolation. All state changes apply to the entire intersection to avoid inconsistent signal combinations and to keep opposing directions synchronized.
 
+---
+
 ## Deletion of `tcc-shared-services`
 
 In the initial design, we planned two additional shared services: a **location validator** and a **time service**. During implementation, both were removed.
@@ -660,7 +668,7 @@ In the initial design, we planned two additional shared services: a **location v
 * **Time service:** This was originally intended to validate timestamps on priority requests. We later simplified the design by generating and attaching timestamps exclusively on the server side, rather than accepting them from clients. This prevents timestamp spoofing without requiring a separate service, so the time service was removed as well.
 
 
-## Testing Priority Service
+# Testing Priority Service
 
 This part will explain how to test the priority service, in regards to managing the priority between mayor - and emergency-vehicles. 
 
