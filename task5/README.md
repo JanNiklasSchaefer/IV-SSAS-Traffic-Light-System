@@ -659,6 +659,89 @@ For safety reasons, the management client follows the same transition-locking be
 * The management client cannot change a single traffic light in isolation. All state changes apply to the entire intersection to avoid inconsistent signal combinations and to keep opposing directions synchronized.
 
 ---
+## `tcc-audit-service` — Implementation decisions
+
+As part of this task, we added basic security auditing through the `tcc-audit-service`. While intentionally simple, it was already useful during development and debugging. Every request handled by `tcc-state-controller`, `tcc-status-service`, and `tcc-priority-service` results in an audit event that is sent to the audit service.
+
+### Audit event endpoint
+
+* `POST /api/audit/events`
+  Body:
+
+  ```json
+  {
+    "serviceType": "<String>",
+    "timestamp": "<long>",
+    "logMessage": "<String>"
+  }
+  ```
+
+Each event uses a dedicated `logMessage` depending on what happened (e.g., request accepted/denied,validation failure etc,). This makes it possible to trace external client activity across services.
+
+### Log retrieval (internal only)
+
+Logs are only readable by internal services. They can be queried via:
+
+* `GET /api/audit/logs?from=<long>&to=<long>`
+
+To inspect logs manually, we use a Kubernetes test pod and authenticate as an authorized service. (`tcc-state-controller`, `tcc-status-service` and `tcc-priority-service`)
+
+```bash
+# Apply Kubernetes manifests for the test pod
+kubectl apply -f kubernetes/testing-pod/gruppe8-testing-pod.yaml
+
+# Create test pod and mount secrets (run from /task5/)
+kubectl -n gruppe8-testing run tls-debug \
+  --image=curlimages/curl:8.5.0 \
+  --restart=Never \
+  --overrides='
+{
+  "spec": {
+    "containers": [{
+      "name": "curl",
+      "image": "curlimages/curl:8.5.0",
+      "command": ["sh","-c","sleep 3600"],
+      "stdin": true,
+      "tty": true,
+      "volumeMounts": [
+        {"name":"certs","mountPath":"/etc/tls","readOnly":true}
+      ]
+    }],
+    "volumes": [
+      {"name":"certs","secret":{"secretName":"gruppe8-task4-testing-cert-tls"}}
+    ]
+  }
+}'
+
+# Exec into the test pod
+kubectl -n gruppe8-testing exec -it tls-debug -- sh
+```
+
+Inside the pod, request an access token and fetch logs as `tcc-state-controller`:
+
+```bash
+TOKEN=$(curl -vk \
+  --cacert /etc/tls/ca.crt \
+  -d grant_type=client_credentials \
+  -d client_id=tcc-state-controller \
+  -d client_secret=MEb3nfjgTGkEHiZs8NugXxKTf2UqHdVC \
+  https://keycloak-service.keycloak.svc.cluster.local:8443/keycloak/realms/group8-task5/protocol/openid-connect/token \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+echo "LEN=${#TOKEN}"  # if > 0, token retrieval worked
+
+curl -v \
+  --cacert /etc/tls/ca.crt \
+  --cert /etc/tls/tls.crt \
+  --key /etc/tls/tls.key \
+  -H "Authorization: Bearer $TOKEN" \
+  "https://gruppe8-tcc-audit-service.gruppe8-tcc.svc.cluster.local:443/api/audit/logs?from=0&to=9999999999999"
+```
+
+**Note:** The example query returns *all* logs. If the system has been running for a while, the response can become very large. Consider using a narrower `from`/`to` range when testing the endpoint.
+
+
+
 
 ## Deletion of `tcc-shared-services`
 

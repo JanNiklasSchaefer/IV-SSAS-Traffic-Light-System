@@ -323,7 +323,7 @@ kubectl config set-context --current --namespace=keycloak
 kubectl exec -n keycloak keycloak-0 -- \
   /opt/keycloak/bin/kc.sh export --optimized \
   --http-management-port=9002 \
-  --file /tmp/group8-task5-realm-import-new.json
+  --file /tmp/group8-task5-realm-import.json
 ```
 
 #### 3. Confirm it exists
