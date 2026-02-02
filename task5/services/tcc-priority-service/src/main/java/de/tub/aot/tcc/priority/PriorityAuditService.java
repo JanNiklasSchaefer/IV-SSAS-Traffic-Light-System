@@ -13,6 +13,8 @@ import jakarta.ws.rs.core.Response;
 import io.quarkus.oidc.client.filter.OidcClientFilter;
 
 
+import de.tub.aot.common.models.AuditObject;
+
 
 @RegisterRestClient(configKey = "audit-service-api")
 @OidcClientFilter
@@ -22,10 +24,11 @@ public interface PriorityAuditService {
     
     @POST
     @Path("/api/audit/events")
-    Response logEvent(Object auditEvent);
+    Response logEvent(AuditObject auditEvent);
 
     @GET
     @Path("/api/audit/logs")
     public Response getLogs(@QueryParam("from") long from, @QueryParam("to") long to);
 }
+
 

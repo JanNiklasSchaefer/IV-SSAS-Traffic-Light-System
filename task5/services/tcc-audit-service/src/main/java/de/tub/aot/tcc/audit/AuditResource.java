@@ -12,21 +12,22 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
-import java.util.List;
+import de.tub.aot.common.models.AuditObject;
+
 
 @Path("/api/audit")
 @ApplicationScoped
 @DenyAll
 public class AuditResource {
 
-    private List<Object> auditLogs = new ArrayList<>();
+    private ArrayList<AuditObject> auditLogs = new ArrayList<>();
 
     @POST
     @Path("/events")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role"})
-    public Response logEvent(Object auditEvent) {
+    public Response logEvent(AuditObject auditEvent) {
         auditLogs.add(auditEvent);
         return Response.ok().build();
     }
@@ -36,6 +37,26 @@ public class AuditResource {
     @Produces(MediaType.APPLICATION_JSON)
     @RolesAllowed({"tcc-priority-service-audit-role","tcc-state-controller-audit-role"})
     public Response getLogs(@QueryParam("from") long from, @QueryParam("to") long to) {
-        return Response.ok(auditLogs).build();
+        // basic validation
+        if (from < 0 || to < 0) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("from/to must be epoch milliseconds (>= 0)")
+                    .build();
+        }
+        if (to < from) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("'to' must be >= 'from'")
+                    .build();
+        }
+
+        ArrayList<AuditObject> filtered = new ArrayList<>();
+        for (AuditObject log : auditLogs) {
+            long ts = log.getTimestamp();
+            if (ts >= from && ts <= to) {
+                filtered.add(log);
+            }
+        }
+
+        return Response.ok(filtered).build();
     }
 }

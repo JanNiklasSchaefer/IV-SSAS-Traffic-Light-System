@@ -24,6 +24,8 @@ import java.util.UUID;
 
 import de.tub.aot.common.models.TrafficLightId;
 import de.tub.aot.common.models.TrafficStatus;
+import de.tub.aot.common.models.AuditObject;
+
 
 import java.time.Instant;
 
@@ -51,6 +53,12 @@ public class StateResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response changeState(StateChangeRequest request) {
         Response output = tccStateControllerClient.changeState();
+        try {
+            Response auditResponse = auditService.logEvent(new AuditObject("tcc-state-controller", "state of traffic changed by priority request"));
+            LOG.info("Audit Service Response: " + auditResponse.getStatus());
+        } catch (Exception e) {
+            LOG.warn("Audit Service call failed: " + e.getMessage());
+        }
         return output;
     }
 
@@ -73,7 +81,7 @@ public class StateResource {
 
         LOG.info("Calling Audit Service...");
         try {
-            Response auditResponse = auditService.logEvent("Get intersection state" + Instant.now().toString());
+            Response auditResponse = auditService.logEvent(new AuditObject("tcc-state-controller", "state of traffic lights by management requested"));
             LOG.info("Audit Service Response: " + auditResponse.getStatus());
         } catch (Exception e) {
             LOG.warn("Audit Service call failed: " + e.getMessage());
@@ -131,7 +139,7 @@ public class StateResource {
         // 2. Audit Service aufrufen - Event loggen
         LOG.info("Calling Audit Service...");
         try {
-            Response auditResponse = auditService.logEvent("Set intersection state to: " + goalState);
+            Response auditResponse = auditService.logEvent(new AuditObject("tcc-state-controller", "traffic light with id " + trafficLightId.toString() + "changed to " + goalState + " by traffic-management-center"));
             LOG.info("Audit Service Response: " + auditResponse.getStatus());
         } catch (Exception e) {
             LOG.warn("Audit Service call failed: " + e.getMessage());

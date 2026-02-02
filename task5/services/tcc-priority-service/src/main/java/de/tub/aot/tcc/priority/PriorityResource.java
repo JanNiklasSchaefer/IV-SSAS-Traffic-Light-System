@@ -19,6 +19,7 @@ import org.jboss.logging.Logger;
 import de.tub.aot.common.models.TrafficStatus;
 import de.tub.aot.common.models.PriorityRequest;
 import de.tub.aot.common.models.PriorityResponse;
+import de.tub.aot.common.models.AuditObject;
 
 import java.time.Instant;
 import java.util.Comparator;
@@ -57,7 +58,7 @@ public class PriorityResource {
 
     @Inject
     @RestClient
-    PriorityAuditService auditClient;
+    PriorityAuditService auditService;
 
     @Inject
     SecurityIdentity identity;
@@ -158,10 +159,22 @@ public class PriorityResource {
             vehicleType = "mayor-vehicle";
         } else {
             // Should never happen because of @RolesAllowed, but keep it safe
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + "due to missing role"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied", null, "Missing required role");
         }
 
         if(!currentRequest.getVehicleType().equals(vehicleType)){
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + "due to mismatched vehicle type"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied", null, "Vehicle Type does not align with assigned Role");
         }
 
@@ -176,15 +189,33 @@ public class PriorityResource {
                 (currentRequest.getVehicleId() == null &&
                         currentRequest.getVehicleType() == null &&
                         currentRequest.getTrafficLightId() == null)) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + " Request body malformed or incomplete"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied", null, "Request body is required or incomplete");
         }
 
         String vehicleId = currentRequest.getVehicleId();
         if (!isValidVehicleId(vehicleId)) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + " Invalid or missing vehicle id"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied", null, "Invalid or missing vehicleId");
         }
 
         if (!isValidVehicleType(vehicleType)) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + " Invalid vehicle Type"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied",
                     null,
                     "Invalid vehicleType. Allowed values: emergency-vehicle, mayor-vehicle, other");
@@ -192,10 +223,22 @@ public class PriorityResource {
 
         UUID trafficLightId = currentRequest.getTrafficLightId();
         if (!isValidTrafficLightId(trafficLightId)) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + " Invalid or missing traffic light id"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied", "Invalid or missing trafficLightId");
         }
 
         if (this.activeRequestsByVehicle.containsKey(vehicleId)) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + " request id with vehicle id already exists"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied",
                     null,
                     "Request with ID: " + this.activeRequestsByVehicle.get(vehicleId) + " already exists.");
@@ -214,6 +257,12 @@ public class PriorityResource {
         TrafficStatus trafficStatus = statusClient.getTrafficState(currentRequest.getTrafficLightId());
 
         if (trafficStatus.getState().equals("yellow")) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request queued from " + currentRequest.getVehicleId()));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("queued",
                     requestId,
                     "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
@@ -223,6 +272,12 @@ public class PriorityResource {
             this.requestQueue.poll();
             this.requestStore.remove(requestId);
             this.activeRequestsByVehicle.remove(currentRequest.getVehicleId());
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request accepted from " + currentRequest.getVehicleId()));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("accepted",
                     requestId,
                     "Traffic Light was already Green. If Vehicles are blocking you in front, only start a PriorityRequest when nobody is in front of you.");
@@ -250,6 +305,12 @@ public class PriorityResource {
 
                     // Treat non-2xx as failure
                     if (status / 100 != 2) {
+                        try {
+                            Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request queued from " + currentRequest.getVehicleId()+ " state controller call failed"));
+                            LOG.info("Audit Service Response: " + auditResponse.getStatus());
+                        } catch (Exception e) {
+                            LOG.warn("Audit Service call failed: " + e.getMessage());
+                        }
                         return new PriorityResponse(
                             "queued",
                             requestId,
@@ -261,11 +322,23 @@ public class PriorityResource {
                         this.requestQueue.poll();
                         this.requestStore.remove(requestId);
                         this.activeRequestsByVehicle.remove(currentRequest.getVehicleId());
+                        try {
+                            Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request accepted from " + currentRequest.getVehicleId()));
+                            LOG.info("Audit Service Response: " + auditResponse.getStatus());
+                        } catch (Exception e) {
+                            LOG.warn("Audit Service call failed: " + e.getMessage());
+                        }
                         return new PriorityResponse("accepted", requestId);
                     }
                 } catch (Exception e) {
                     // If the client throws (timeouts, connection errors, etc.)
                     LOG.error("changeState() call threw exception", e);
+                    try {
+                        Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request denied from " + currentRequest.getVehicleId() + " state controller unreachable"));
+                        LOG.info("Audit Service Response: " + auditResponse.getStatus());
+                    } catch (Exception e2) {
+                        LOG.warn("Audit Service call failed: " + e2.getMessage());
+                    }
                     return new PriorityResponse("denied", null, "State controller unreachable: " + e.getMessage());
                 } finally {
                     if (r != null) {
@@ -273,7 +346,12 @@ public class PriorityResource {
                     }
                 }
         }
-
+        try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " queued."));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+        } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+        }
         return new PriorityResponse("queued", requestId);
     }
 
@@ -284,6 +362,12 @@ public class PriorityResource {
     public PriorityResponse getRequestStatus(@PathParam("request_id") String requestId) {
         // Input validation
         if (!isValidRequestId(requestId)) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " denied. Invalid request id"));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("denied", null, "Invalid requestId format (must be valid UUID)");
         }
 
@@ -293,6 +377,12 @@ public class PriorityResource {
         QueuedRequest currentQueuedRequest = this.requestStore.get(requestId);
 
         if (currentQueuedRequest == null) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " not found."));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("NOT_FOUND", requestId);
         }
 
@@ -301,6 +391,12 @@ public class PriorityResource {
         TrafficStatus trafficStatus = statusClient.getTrafficState(currentQueuedRequest.request.getTrafficLightId());
 
         if (trafficStatus.getState().equals("yellow")) {
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " queued."));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("queued",
                     requestId,
                     "Traffic is Currently Yellow, thus Request is queued. Changing now can lead to unsafe traffic States.");
@@ -310,6 +406,12 @@ public class PriorityResource {
             this.requestQueue.poll();
             this.requestStore.remove(requestId);
             this.activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
+            try {
+                Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " accepted."));
+                LOG.info("Audit Service Response: " + auditResponse.getStatus());
+            } catch (Exception e) {
+                LOG.warn("Audit Service call failed: " + e.getMessage());
+            }
             return new PriorityResponse("accepted",
                     requestId,    
                 "Traffic Light is already Green. PriorityRequest with ID: "
@@ -340,6 +442,12 @@ public class PriorityResource {
 
                 // Treat non-2xx as failure
                 if (status / 100 != 2) {
+                    try {
+                        Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " queued. State controller unreachable"));
+                        LOG.info("Audit Service Response: " + auditResponse.getStatus());
+                    } catch (Exception e) {
+                        LOG.warn("Audit Service call failed: " + e.getMessage());
+                    }
                     return new PriorityResponse(
                         "queued",
                         requestId,
@@ -351,6 +459,12 @@ public class PriorityResource {
                     this.requestQueue.poll();
                     this.requestStore.remove(requestId);
                     this.activeRequestsByVehicle.remove(currentQueuedRequest.request.getVehicleId());
+                    try {
+                        Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " accepted."));
+                        LOG.info("Audit Service Response: " + auditResponse.getStatus());
+                    } catch (Exception e) {
+                        LOG.warn("Audit Service call failed: " + e.getMessage());
+                    }
                     return new PriorityResponse("accepted",
                             requestId,
                             "Request with Request ID: " + requestId + " accepted. Request is now deleted.");
@@ -358,6 +472,12 @@ public class PriorityResource {
             } catch (Exception e) {
                 // If the client throws (timeouts, connection errors, etc.)
                 LOG.error("changeState() call threw exception", e);
+                try {
+                    Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " denied. State controller not reachable"));
+                    LOG.info("Audit Service Response: " + auditResponse.getStatus());
+                } catch (Exception e2) {
+                    LOG.warn("Audit Service call failed: " + e2.getMessage());
+                }
                 return new PriorityResponse("denied", null, "State controller unreachable: " + e.getMessage());
             } finally {
                 if (r != null) {
@@ -371,7 +491,12 @@ public class PriorityResource {
             }
 
         }
-
+        try {
+            Response auditResponse = auditService.logEvent(new AuditObject("tcc-priority-service", "Priority Request " + requestId + " queued."));
+            LOG.info("Audit Service Response: " + auditResponse.getStatus());
+        } catch (Exception e) {
+            LOG.warn("Audit Service call failed: " + e.getMessage());
+        }
         return new PriorityResponse("queued", requestId);
     }
 }
