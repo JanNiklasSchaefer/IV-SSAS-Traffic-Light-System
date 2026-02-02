@@ -284,7 +284,3 @@ curl -v -X GET \
 | Traffic Light      | Muss existieren                                  |
 
 **Alle Fehler geben HTTP 200 mit JSON Response zurück** (einheitlich mit Priority Service).
-
----
-
-_Generiert für Task 5 - Status Service Input Validation Tests_
