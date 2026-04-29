@@ -1,7 +1,7 @@
 # Secure Traffic Light System
 
-A Kubernetes-native traffic light management system built with Quarkus and Docker,
-developed as part of a university security engineering project. 
+A microservice-based traffic light system built with Quarkus, Docker, and Kubernetes,
+developed as part of a university security engineering project.
 
 ## Overview
 
