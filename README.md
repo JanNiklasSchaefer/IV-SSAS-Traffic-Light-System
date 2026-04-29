@@ -9,7 +9,7 @@ This project focuses on implementing a **secure distributed system** — coverin
 authentication, authorization, access control, and endpoint hardening across a
 microservice architecture deployed on Kubernetes (kind cluster).
 
-A full description of the system's functionality can be found in [`Task5/README.md`](./Task5/README.md).
+A full description of the system's functionality can be found in [`task5/README.md`](./task5/README.md).
 
 ## Security Highlights
 
